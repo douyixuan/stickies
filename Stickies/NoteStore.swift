@@ -50,6 +50,12 @@ final class NoteStore: ObservableObject {
         save()
     }
 
+    func setColor(_ id: UUID, _ color: Int) {
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
+        notes[index].color = color
+        save()
+    }
+
     func note(_ id: UUID) -> StickyNote? {
         notes.first(where: { $0.id == id })
     }
