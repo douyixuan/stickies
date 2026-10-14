@@ -1,0 +1,22 @@
+name: Stickies
+options:
+  bundleIdPrefix: dev.douyixuan
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    MACOSX_DEPLOYMENT_TARGET: '14.0'
+targets:
+  Stickies:
+    type: application
+    platform: macOS
+    sources: [Stickies]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.douyixuan.stickies
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSUIElement: YES
+        CODE_SIGNING_ALLOWED: NO
+        SWIFT_EMIT_LOC_STRINGS: YES
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_USER_SELECTED_FILES: readonly
+        COMBINE_HIDPI_IMAGES: YES
