@@ -29,9 +29,9 @@ Requires a Mac with Xcode. Current milestone: independent note windows, drag/res
 bash scripts/preview.sh
 ```
 
-This builds `build/Stickies.app` without XcodeGen, downloads, iCloud, or signing credentials. It opens a welcome note on first launch. Edit the note, drag its title bar, resize a corner, and use the menu bar note icon for new notes, colors, grid/list arrangement and quit. Closing a note hides it; Show All Notes brings it back. Overflowing arrangements overlap within the current screen.
+This builds `build/Stickies.app` without XcodeGen, downloads, iCloud, or signing credentials. It opens a welcome note on first launch. The preview process is named Stickies Preview to distinguish it from Apple’s built-in Stickies. Edit the note, drag its title bar, resize a corner, and use the menu bar note icon for new notes, colors, grid/list arrangement and quit. Closing a note hides it; Show All Notes brings it back. Overflowing arrangements overlap within the current screen.
 
-The preview script keeps notes in `build/preview-data/notes.json`, separate from normal app data. Quit and rerun the same script to verify text, color, visibility, window size and position restore. Do not run two instances against the same data directory. To launch the built bundle with normal Application Support storage, use `open build/Stickies.app`. Corrupt data is preserved and reported; saving is disabled for that run.
+The preview script keeps notes in `build/preview-data/notes.json`, separate from normal app data. Quit and rerun the same script to verify text, color, visibility, window size and position restore. `preview.sh` launches through macOS LaunchServices with the isolated data directory. The app locks its data directory; another instance using that directory reports the conflict and exits without writing. Opening `build/Stickies.app` directly also uses `build/preview-data`. The regular Xcode-built app uses Application Support. Corrupt data is preserved and reported; saving is disabled for that run.
 
 ```sh
 bash scripts/test-layout.sh
@@ -41,3 +41,7 @@ bash scripts/build-local.sh
 Desktop-level/Spaces behavior and optional CloudKit sync remain future milestones. The repository currently contains no detailed PRD defining `display:both` or `layout:both`; this milestone uses the existing independent-window and grid/list behavior from PR #1.
 
 On a logged-in Mac, `bash scripts/test-store.sh` additionally checks real AppKit window move callbacks and exact frame/text/color restoration in a second process. It uses a fresh temporary data directory and does not require Accessibility or iCloud permissions. CI runs geometry tests and both build paths; it does not claim to exercise interactive dragging.
+
+The native **Notes** menu and each note’s **Note actions** menu provide New Note, Show All Notes, Hide, and Grid/List arrangement. The first text line becomes the window title. Closing a window hides its note without deleting text. Reopening the app shows hidden notes again. **Keep Notes on Top** switches between ordinary windows and floating windows and persists across launches; it does not implement desktop-level or all-Spaces attachment. Long notes scroll in the native text editor.
+
+The real UI check confirmed new/edit/long-text/close/reopen and the native Window → Zoom command, then quit/relaunch with both notes and exact stored frames unchanged. CUA corner-drag positioning remains unreliable; repeated title-drag calls sometimes returned success without changing the saved frame. Do not treat this as complete verification of mouse edge resizing or arbitrary mouse dragging.

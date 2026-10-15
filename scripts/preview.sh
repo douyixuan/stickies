@@ -3,4 +3,4 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 bash scripts/build-local.sh
 export STICKIES_DATA_DIR="$PWD/build/preview-data"
-exec build/Stickies.app/Contents/MacOS/Stickies
+exec open -n --env "STICKIES_DATA_DIR=$STICKIES_DATA_DIR" "$PWD/build/Stickies.app"

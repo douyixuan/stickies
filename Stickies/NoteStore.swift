@@ -1,3 +1,4 @@
+import Darwin
 import AppKit
 import SwiftUI
 
@@ -19,10 +20,22 @@ final class NoteStore: ObservableObject {
     private var isArranging = false
     @Published private(set) var persistenceError: String?
     private var canSave = true
+    private var lockFD: Int32 = -1
+    private var isLockedByAnotherInstance = false
+    @Published private(set) var keepOnTop = false
+    private var preferencesURL: URL { fileURL.deletingLastPathComponent().appendingPathComponent("preferences.json") }
+
+    private struct Preferences: Codable { var keepOnTop: Bool }
+
 
     private let fileURL: URL = {
         if let path = ProcessInfo.processInfo.environment["STICKIES_DATA_DIR"] {
             let directory = URL(fileURLWithPath: path, isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory.appendingPathComponent("notes.json")
+        }
+        if Bundle.main.bundleIdentifier == "dev.douyixuan.stickies.local-preview" {
+            let directory = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("preview-data", isDirectory: true)
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             return directory.appendingPathComponent("notes.json")
         }
@@ -33,6 +46,18 @@ final class NoteStore: ObservableObject {
     }()
 
     private init() {
+        let lockURL = fileURL.deletingLastPathComponent().appendingPathComponent("notes.lock")
+        lockFD = open(lockURL.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        guard lockFD >= 0, flock(lockFD, LOCK_EX | LOCK_NB) == 0 else {
+            canSave = false
+            isLockedByAnotherInstance = true
+            persistenceError = "This notes folder is already open or cannot be locked. Close its other Stickies instance before reopening. No notes were changed."
+            return
+        }
+        if let data = try? Data(contentsOf: preferencesURL),
+           let preferences = try? JSONDecoder().decode(Preferences.self, from: data) {
+            keepOnTop = preferences.keepOnTop
+        }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
             notes = try JSONDecoder().decode([StickyNote].self, from: Data(contentsOf: fileURL))
@@ -40,6 +65,25 @@ final class NoteStore: ObservableObject {
             canSave = false
             persistenceError = "Could not read notes. Original file preserved at \(fileURL.path). \(error.localizedDescription)"
         }
+    }
+
+    deinit {
+        if lockFD >= 0 { close(lockFD) }
+    }
+
+    func setKeepOnTop(_ enabled: Bool) {
+        keepOnTop = enabled
+        for window in windows.values { window.level = enabled ? .floating : .normal }
+        guard canSave else { return }
+        do {
+            try JSONEncoder().encode(Preferences(keepOnTop: enabled)).write(to: preferencesURL, options: .atomic)
+        } catch {
+            persistenceError = "Window preference could not be saved: \(error.localizedDescription)"
+        }
+    }
+
+    func hideAll() {
+        for id in notes.map(\.id) { hide(id) }
     }
 
     func createNote() {
@@ -53,6 +97,7 @@ final class NoteStore: ObservableObject {
     func updateText(_ id: UUID, _ text: String) {
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].text = text
+        windows[id]?.title = windowTitle(for: notes[index])
         save()
     }
 
@@ -84,7 +129,13 @@ final class NoteStore: ObservableObject {
             alert.messageText = "Stickies could not load your notes"
             alert.informativeText = persistenceError
             alert.runModal()
+            if isLockedByAnotherInstance { NSApplication.shared.terminate(nil) }
         }
+    }
+
+    private func windowTitle(for note: StickyNote) -> String {
+        let firstLine = note.text.split(separator: "\n").first.map(String.init) ?? ""
+        return firstLine.isEmpty ? "New Note" : String(firstLine.prefix(60))
     }
 
     func show(_ id: UUID) {
@@ -104,7 +155,8 @@ final class NoteStore: ObservableObject {
             defer: false
         )
         window.setFrame(note.frame, display: false)
-        window.title = "Sticky Note"
+        window.title = windowTitle(for: note)
+        window.level = keepOnTop ? .floating : .normal
         window.minSize = NSSize(width: 180, height: 120)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: NoteView(noteID: id))
