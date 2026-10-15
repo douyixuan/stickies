@@ -16,7 +16,7 @@ struct NoteView: View {
             .padding(8)
             .background(Color(nsColor: NotePalette.color(note.color)))
             .overlay(alignment: .bottom) {
-                if let error = store.persistenceError {
+                if let error = store.persistenceError ?? store.layoutError {
                     Text(error).font(.caption).foregroundStyle(.red)
                         .padding(8).background(.regularMaterial)
                 }
@@ -38,8 +38,8 @@ struct NoteHeaderControls: View {
                 Button("Show All Notes") { store.showAll() }
                 Button("Hide This Note") { store.hide(noteID) }
                 Divider()
-                Button("Arrange Grid") { store.arrange(.grid) }
-                Button("Arrange List") { store.arrange(.list) }
+                Button(store.isCollapsed(noteID) ? "Expand Note" : "Collapse Note") { store.toggleCollapse(noteID) }
+                ArrangementCommands()
                 Divider()
                 Toggle("Keep Notes on Top", isOn: Binding(
                     get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
@@ -65,5 +65,20 @@ struct NoteHeaderControls: View {
         .foregroundStyle(.black.opacity(hovering ? 0.8 : 0.42))
         .frame(width: 52, height: 22)
         .onHover { hovering = $0 }
+    }
+}
+
+
+struct ArrangementCommands: View {
+    @ObservedObject private var store = NoteStore.shared
+    var body: some View {
+        Button("Free Layout") { store.arrange(.free) }.keyboardShortcut("0", modifiers: [.command, .option])
+        Button("Arrange Grid") { store.arrange(.grid) }.keyboardShortcut("1", modifiers: [.command, .option])
+        Button("Arrange List") { store.arrange(.list) }.keyboardShortcut("2", modifiers: [.command, .option])
+        Button("Arrange Compact") { store.arrange(.compact) }.keyboardShortcut("3", modifiers: [.command, .option])
+        Button("Restore Previous Layout") { store.restoreLayout() }
+            .keyboardShortcut("r", modifiers: [.command, .option])
+            .disabled(!store.canRestoreLayout)
+        if let error = store.layoutError { Text(error).font(.caption) }
     }
 }

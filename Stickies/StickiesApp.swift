@@ -17,8 +17,7 @@ struct StickiesApp: App {
                 get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
             ))
             Divider()
-            Button("Arrange Grid") { NoteStore.shared.arrange(.grid) }
-            Button("Arrange List") { NoteStore.shared.arrange(.list) }
+            ArrangementCommands()
             Divider()
             Button("Quit Stickies") { NSApplication.shared.terminate(nil) }
         }
@@ -29,8 +28,7 @@ struct StickiesApp: App {
                 Button("Show All Notes") { store.showAll() }
                 Button("Hide All Notes") { store.hideAll() }
                 Divider()
-                Button("Arrange Grid") { store.arrange(.grid) }
-                Button("Arrange List") { store.arrange(.list) }
+                ArrangementCommands()
                 Toggle("Keep Notes on Top", isOn: Binding(
                     get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
                 ))
