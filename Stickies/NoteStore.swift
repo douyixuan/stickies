@@ -86,12 +86,14 @@ final class NoteStore: ObservableObject {
         for id in notes.map(\.id) { hide(id) }
     }
 
-    func createNote() {
+    @discardableResult
+    func createNote(showWindow: Bool = true) -> UUID {
         let offset = CGFloat(notes.count % 8) * 28
-        let note = StickyNote(frame: CGRect(x: 120 + offset, y: 220 + offset, width: 260, height: 220))
+        let note = StickyNote(frame: CGRect(x: 120 + offset, y: 220 + offset, width: 260, height: 220), visible: showWindow)
         notes.append(note)
         save()
-        show(note.id)
+        if showWindow { show(note.id) }
+        return note.id
     }
 
     func updateText(_ id: UUID, _ text: String) {

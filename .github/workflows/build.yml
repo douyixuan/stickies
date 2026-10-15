@@ -15,5 +15,7 @@ jobs:
         run: bash scripts/test-layout.sh
       - name: Build local preview
         run: bash scripts/build-local.sh
+      - name: Test Canvas without opening windows
+        run: bash scripts/test-canvas.sh
       - name: Build
         run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO build
