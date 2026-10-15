@@ -19,5 +19,7 @@ jobs:
         run: bash scripts/test-canvas.sh
       - name: Test layout snapshots and recovery without windows
         run: bash scripts/test-layout-store.sh
+      - name: Test window mode preferences without windows
+        run: bash scripts/test-window-mode.sh
       - name: Build
         run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO build

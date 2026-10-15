@@ -16,7 +16,7 @@ struct NoteView: View {
             .padding(8)
             .background(Color(nsColor: NotePalette.color(note.color)))
             .overlay(alignment: .bottom) {
-                if let error = store.persistenceError ?? store.layoutError {
+                if let error = store.persistenceError ?? store.layoutError ?? store.preferenceError {
                     Text(error).font(.caption).foregroundStyle(.red)
                         .padding(8).background(.regularMaterial)
                 }
@@ -41,9 +41,7 @@ struct NoteHeaderControls: View {
                 Button(store.isCollapsed(noteID) ? "Expand Note" : "Collapse Note") { store.toggleCollapse(noteID) }
                 ArrangementCommands()
                 Divider()
-                Toggle("Keep Notes on Top", isOn: Binding(
-                    get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
-                ))
+                WindowModeCommands()
             } label: {
                 Image(systemName: "note.text")
             }
@@ -80,5 +78,18 @@ struct ArrangementCommands: View {
             .keyboardShortcut("r", modifiers: [.command, .option])
             .disabled(!store.canRestoreLayout)
         if let error = store.layoutError { Text(error).font(.caption) }
+    }
+}
+
+
+struct WindowModeCommands: View {
+    @ObservedObject private var store = NoteStore.shared
+    var body: some View {
+        Picker("All Note Windows", selection: Binding(get: { store.windowMode }, set: { store.setWindowMode($0) })) {
+            Text("Ordinary Windows").tag(NoteWindowMode.standard)
+            Text("Desktop — Behind Apps").tag(NoteWindowMode.desktop)
+            Text("Floating — Keep on Top").tag(NoteWindowMode.floating)
+        }
+        if let error = store.preferenceError { Text(error).font(.caption) }
     }
 }

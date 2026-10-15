@@ -44,9 +44,12 @@ final class NoteStore: ObservableObject {
     private var lockFD: Int32 = -1
     private var isLockedByAnotherInstance = false
     @Published private(set) var keepOnTop = false
+    @Published private(set) var windowMode: NoteWindowMode = .standard
+    @Published private(set) var preferenceError: String?
+    private var canSavePreferences = true
     private var preferencesURL: URL { fileURL.deletingLastPathComponent().appendingPathComponent("preferences.json") }
 
-    private struct Preferences: Codable { var keepOnTop: Bool }
+    private struct Preferences: Codable { var keepOnTop: Bool; var windowMode: NoteWindowMode? }
 
 
     private let fileURL: URL = {
@@ -75,9 +78,15 @@ final class NoteStore: ObservableObject {
             persistenceError = "This notes folder is already open or cannot be locked. Close its other Stickies instance before reopening. No notes were changed."
             return
         }
-        if let data = try? Data(contentsOf: preferencesURL),
-           let preferences = try? JSONDecoder().decode(Preferences.self, from: data) {
-            keepOnTop = preferences.keepOnTop
+        if FileManager.default.fileExists(atPath: preferencesURL.path) {
+            do {
+                let preferences = try JSONDecoder().decode(Preferences.self, from: Data(contentsOf: preferencesURL))
+                windowMode = preferences.windowMode ?? (preferences.keepOnTop ? .floating : .standard)
+                keepOnTop = windowMode == .floating
+            } catch {
+                canSavePreferences = false
+                preferenceError = "Could not read window preferences. Original file preserved; window mode changes are disabled."
+            }
         }
         if FileManager.default.fileExists(atPath: layoutURL.path) {
             do {
@@ -103,13 +112,23 @@ final class NoteStore: ObservableObject {
     }
 
     func setKeepOnTop(_ enabled: Bool) {
-        keepOnTop = enabled
-        for window in windows.values { window.level = enabled ? .floating : .normal }
-        guard canSave else { return }
+        setWindowMode(enabled ? .floating : .standard)
+    }
+
+    func setWindowMode(_ mode: NoteWindowMode) {
+        guard canSave, canSavePreferences else { return }
         do {
-            try JSONEncoder().encode(Preferences(keepOnTop: enabled)).write(to: preferencesURL, options: .atomic)
+            try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode))
+                .write(to: preferencesURL, options: .atomic)
+            windowMode = mode
+            keepOnTop = mode == .floating
+            for window in windows.values {
+                window.level = mode.level
+                window.collectionBehavior = mode.collectionBehavior
+            }
+            preferenceError = nil
         } catch {
-            persistenceError = "Window preference could not be saved: \(error.localizedDescription)"
+            preferenceError = "Window mode could not be saved; the previous mode is unchanged: \(error.localizedDescription)"
         }
     }
 
@@ -213,7 +232,8 @@ final class NoteStore: ObservableObject {
         dragHint.toolTip = "Drag this title bar to move the note. Select text below to edit."
         dragAccessory.view = dragHint
         window.addTitlebarAccessoryViewController(dragAccessory)
-        window.level = keepOnTop ? .floating : .normal
+        window.level = windowMode.level
+        window.collectionBehavior = windowMode.collectionBehavior
         window.minSize = NSSize(width: 180, height: 120)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: NoteView(noteID: id))
