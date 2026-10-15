@@ -3,6 +3,7 @@ import SwiftUI
 
 @main
 struct StickiesApp: App {
+    @ObservedObject private var store = NoteStore.shared
     @NSApplicationDelegateAdaptor(StickiesDelegate.self) private var delegate
 
     var body: some Scene {
@@ -10,16 +11,38 @@ struct StickiesApp: App {
             Button("New Note") { NoteStore.shared.createNote() }
                 .keyboardShortcut("n")
             Button("Show All Notes") { NoteStore.shared.showAll() }
+            Button("Hide All Notes") { store.hideAll() }
+            Toggle("Keep Notes on Top", isOn: Binding(
+                get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
+            ))
             Divider()
             Button("Arrange Grid") { NoteStore.shared.arrange(.grid) }
             Button("Arrange List") { NoteStore.shared.arrange(.list) }
             Divider()
             Button("Quit Stickies") { NSApplication.shared.terminate(nil) }
         }
+        .commands {
+            CommandMenu("Notes") {
+                Button("New Note") { store.createNote() }.keyboardShortcut("n")
+                Button("Show All Notes") { store.showAll() }
+                Button("Hide All Notes") { store.hideAll() }
+                Divider()
+                Button("Arrange Grid") { store.arrange(.grid) }
+                Button("Arrange List") { store.arrange(.list) }
+                Toggle("Keep Notes on Top", isOn: Binding(
+                    get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
+                ))
+            }
+        }
     }
 }
 
 final class StickiesDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        Task { @MainActor in NoteStore.shared.showAll() }
+        return true
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in NoteStore.shared.restoreWindows() }
     }

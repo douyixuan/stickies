@@ -15,7 +15,22 @@ struct NoteView: View {
         if let note = store.note(noteID) {
             VStack(spacing: 0) {
                 HStack {
-                    Image(systemName: "note.text")
+                    Menu {
+                        Button("New Note") { store.createNote() }
+                        Button("Show All Notes") { store.showAll() }
+                        Button("Hide This Note") { store.hide(noteID) }
+                        Divider()
+                        Button("Arrange Grid") { store.arrange(.grid) }
+                        Button("Arrange List") { store.arrange(.list) }
+                        Divider()
+                        Toggle("Keep Notes on Top", isOn: Binding(
+                            get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
+                        ))
+                    } label: {
+                        Image(systemName: "note.text")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .help("Note actions")
                     Spacer()
                     Menu {
                         ForEach(0..<colors.count, id: \.self) { index in
@@ -37,10 +52,17 @@ struct NoteView: View {
                     set: { store.updateText(noteID, $0) }
                 ))
                 .font(.system(size: 15))
+                .foregroundStyle(.black)
                 .scrollContentBackground(.hidden)
                 .padding(8)
             }
-            .background(colors[note.color % colors.count])
+            .background(colors[((note.color % colors.count) + colors.count) % colors.count])
+            .overlay(alignment: .bottom) {
+                if let error = store.persistenceError {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                        .padding(8).background(.regularMaterial)
+                }
+            }
         }
     }
 }
