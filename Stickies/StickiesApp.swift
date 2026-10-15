@@ -34,6 +34,16 @@ struct StickiesApp: App {
 }
 
 final class StickiesDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if NoteStore.shared.flushPendingChanges() { return .terminateNow }
+        let alert = NSAlert()
+        alert.messageText = "Some note changes have not been saved"
+        alert.informativeText = "Keep editing to preserve the changes in memory, or explicitly discard them by quitting. " + (NoteStore.shared.persistenceError ?? "")
+        alert.addButton(withTitle: "Keep Editing")
+        alert.addButton(withTitle: "Quit Without Saving")
+        return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         Task { @MainActor in NoteStore.shared.showAll() }
         return true

@@ -40,6 +40,7 @@ final class NoteStore: ObservableObject {
         }
     }
     @Published private(set) var persistenceError: String?
+    @Published private(set) var hasUnsavedChanges = false
     private var canSave = true
     var localStateWritable: Bool { canSave }
     var localDataDirectory: URL { fileURL.deletingLastPathComponent() }
@@ -55,18 +56,11 @@ final class NoteStore: ObservableObject {
 
 
     private let fileURL: URL = {
-        if let path = ProcessInfo.processInfo.environment["STICKIES_DATA_DIR"] {
-            let directory = URL(fileURLWithPath: path, isDirectory: true)
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            return directory.appendingPathComponent("notes.json")
-        }
-        if Bundle.main.bundleIdentifier == "dev.douyixuan.stickies.local-preview" {
-            let directory = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("preview-data", isDirectory: true)
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            return directory.appendingPathComponent("notes.json")
-        }
-        let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Stickies", isDirectory: true)
+        let directory = NoteDataLocation.directory(
+            environment: ProcessInfo.processInfo.environment,
+            bundleID: Bundle.main.bundleIdentifier,
+            bundleURL: Bundle.main.bundleURL,
+            applicationSupport: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0])
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory.appendingPathComponent("notes.json")
     }()
@@ -343,11 +337,20 @@ final class NoteStore: ObservableObject {
         }
     }
 
+    /// Used by normal termination; a failed write must not silently discard memory edits.
+    @discardableResult
+    func flushPendingChanges() -> Bool {
+        if hasUnsavedChanges { save() }
+        return !hasUnsavedChanges
+    }
+
     private func save() {
+        hasUnsavedChanges = true
         guard canSave else { return }
         do {
             let data = try JSONEncoder().encode(notes)
             try data.write(to: fileURL, options: .atomic)
+            hasUnsavedChanges = false
             if persistenceError != nil { persistenceError = nil }
         } catch {
             persistenceError = "Changes could not be saved: \(error.localizedDescription)"
@@ -377,5 +380,21 @@ final class NoteWindowDelegate: NSObject, NSWindowDelegate {
     private func persistFrame(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         store?.moved(id, frame: window.frame)
+    }
+}
+
+
+/// Delivery and developer previews never implicitly adopt the user's production notes.
+enum NoteDataLocation {
+    static func directory(environment: [String: String], bundleID: String?, bundleURL: URL,
+                          applicationSupport: URL) -> URL {
+        if let path = environment["STICKIES_DATA_DIR"] {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+        if bundleID == "dev.douyixuan.stickies.local-preview" {
+            return bundleURL.deletingLastPathComponent().appendingPathComponent("preview-data", isDirectory: true)
+        }
+        let name = bundleID == "dev.douyixuan.stickies.delivery" ? "Stickies Delivery" : "Stickies"
+        return applicationSupport.appendingPathComponent(name, isDirectory: true)
     }
 }
