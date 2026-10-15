@@ -2,14 +2,6 @@ import Darwin
 import AppKit
 import SwiftUI
 
-struct StickyNote: Codable, Identifiable {
-    var id: UUID = UUID()
-    var text: String = ""
-    var color: Int = 0
-    var frame: CGRect = CGRect(x: 120, y: 180, width: 260, height: 220)
-    var visible: Bool = true
-}
-
 @MainActor
 final class NoteStore: ObservableObject {
     static let shared = NoteStore()
@@ -60,7 +52,7 @@ final class NoteStore: ObservableObject {
         }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
-            notes = try JSONDecoder().decode([StickyNote].self, from: Data(contentsOf: fileURL))
+            notes = try NotePersistence.load(from: fileURL)
         } catch {
             canSave = false
             persistenceError = "Could not read notes. Original file preserved at \(fileURL.path). \(error.localizedDescription)"
@@ -220,8 +212,7 @@ final class NoteStore: ObservableObject {
     private func save() {
         guard canSave else { return }
         do {
-            let data = try JSONEncoder().encode(notes)
-            try data.write(to: fileURL, options: .atomic)
+            try NotePersistence.save(notes, to: fileURL)
             if persistenceError != nil { persistenceError = nil }
         } catch {
             persistenceError = "Changes could not be saved: \(error.localizedDescription)"
@@ -253,3 +244,4 @@ final class NoteWindowDelegate: NSObject, NSWindowDelegate {
         store?.moved(id, frame: window.frame)
     }
 }
+
