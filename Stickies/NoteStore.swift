@@ -142,6 +142,10 @@ final class NoteStore: ObservableObject {
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].visible = true
         if let existing = windows[id] {
+            let restoredFrame = LayoutEngine.restore(existing.frame, screens: NSScreen.screens.map(\.visibleFrame))
+            existing.setFrame(restoredFrame, display: true)
+            notes[index].frame = existing.frame
+            if existing.isMiniaturized { existing.deminiaturize(nil) }
             existing.makeKeyAndOrderFront(nil)
             save()
             return

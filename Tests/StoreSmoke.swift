@@ -38,6 +38,10 @@ struct StoreSmoke {
             let window = NSApplication.shared.windows.first { $0.title == "Persistence smoke test" }!
             window.setFrame(frame, display: true)
             precondition(store.note(note.id)?.frame == frame)
+            window.miniaturize(nil)
+            store.showAll()
+            precondition(!window.isMiniaturized)
+            precondition(store.note(note.id)?.frame == frame)
             store.hide(note.id)
             precondition(store.note(note.id)?.visible == false)
             store.showAll()
