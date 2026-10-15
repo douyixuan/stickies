@@ -7,6 +7,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
@@ -23,5 +25,9 @@ jobs:
         run: bash scripts/test-window-mode.sh
       - name: Test Canvas board and recovery without windows
         run: bash scripts/test-canvas-board.sh
+      - name: Test crash, lock and pending-save recovery without windows
+        run: bash scripts/test-delivery-recovery.sh
       - name: Build
         run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - name: Package universal delivery candidate without launching
+        run: bash scripts/package-delivery.sh

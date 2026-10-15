@@ -77,3 +77,9 @@ Modes are device-local in `preferences.json`; existing Keep Notes on Top prefere
 Switch **List / Board** in Canvas. Click a card to edit it on the right; drag cards to organize them freely. **Arrange Board** offers Free/Grid/List/Compact and Restore Board. Unlike desktop arrangements, the scrollable board expands to keep all 20–50 cards accessible without overlapping its generated layouts. Hidden notes remain included.
 
 Board positions are independent of desktop note frames and live in `canvas-layout.json`. Each arrangement commits its previous positions and resulting layout together. Restore retains notes created later. Search displays temporary result positions without modifying the board; clear the search to resume dragging/arranging. Failed writes leave the previous layout active, and corrupt data is preserved. `bash scripts/test-canvas-board.sh` covers 50 cards, restart/Restore and failure cases without windows. See `artifact/006-canvas-board/qa-handoff.md` for outstanding real-GUI acceptance across all slices.
+
+## Delivery candidate
+
+After committing a reviewed clean tree, run `bash scripts/package-delivery.sh` to create a universal app and ZIP under `build/releases`, with full commit metadata and SHA-256 checksums. This builds and ad-hoc signs only; it does not install, launch, notarize, or use signing credentials. The delivery app uses its own stable `Application Support/Stickies Delivery` profile across copies. See [launch, backup and rollback instructions](docs/DELIVERY.md).
+
+`bash scripts/test-delivery-recovery.sh` exercises isolated failed-save retry, corrupt/future data preservation, concurrent lock exclusion, and restart after terminating only its own test process. Normal quit retries unsaved note changes and asks to keep editing if saving still fails. The dialog and installation remain subject to authorized GUI QA. See [independent review boundaries](artifact/007-delivery/review.md).
