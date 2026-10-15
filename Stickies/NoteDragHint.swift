@@ -37,3 +37,19 @@ final class NoteWindow: NSWindow {
         super.sendEvent(event)
     }
 }
+
+enum NoteWindowMode: String, Codable, CaseIterable {
+    case standard, desktop, floating
+
+    var level: NSWindow.Level {
+        switch self {
+        case .standard: return .normal
+        case .desktop: return NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+        case .floating: return .floating
+        }
+    }
+
+    var collectionBehavior: NSWindow.CollectionBehavior {
+        self == .desktop ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : []
+    }
+}

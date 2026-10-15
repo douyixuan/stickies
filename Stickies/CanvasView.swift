@@ -60,6 +60,11 @@ struct CanvasView: View {
                 } label: {
                     Label("New Note", systemImage: "plus")
                 }
+                Menu("Window Layout") {
+                    WindowModeCommands()
+                    Divider()
+                    ArrangementCommands()
+                }
                 Button("Search") { searchFocused = true }
                     .keyboardShortcut("f")
             }

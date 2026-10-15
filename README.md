@@ -12,7 +12,7 @@ xcodegen generate
 open Stickies.xcodeproj
 ```
 
-Requires a Mac with Xcode. Current milestone: independent note windows, drag/resize, local persistence and grid/list arrangement. iCloud sync and desktop-level attachment are subsequent milestones.
+Requires a Mac with Xcode. Current milestone: independent note windows, drag/resize, local persistence and grid/list arrangement. iCloud sync remains a subsequent milestone; Desktop/Floating modes are implemented with GUI/Spaces acceptance still pending.
 
 ## Roadmap
 
@@ -38,11 +38,11 @@ bash scripts/test-layout.sh
 bash scripts/build-local.sh
 ```
 
-The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. Desktop-level/Spaces behavior and freeform Canvas cards remain follow-up work; optional CloudKit is not implemented.
+The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. GUI/Spaces validation and freeform Canvas cards remain follow-up work; optional CloudKit is not implemented.
 
 On a logged-in Mac, `bash scripts/test-store.sh` additionally checks real AppKit window move callbacks and exact frame/text/color restoration in a second process. It uses a fresh temporary data directory and does not require Accessibility or iCloud permissions. CI runs geometry tests and both build paths; it does not claim to exercise interactive dragging.
 
-The native **Notes** menu and each note’s **Note actions** menu provide New Note, Show All Notes, Hide, and Grid/List arrangement. The first text line becomes the window title. Closing a window hides its note without deleting text. Hidden notes remain hidden on launch; Show All Notes explicitly reopens them. **Keep Notes on Top** switches between ordinary windows and floating windows and persists across launches; it does not implement desktop-level or all-Spaces attachment. Long notes scroll in the native text editor.
+The native **Notes** menu and each note’s **Note actions** menu provide New Note, Show All Notes, Hide, and Grid/List arrangement. The first text line becomes the window title. Closing a window hides its note without deleting text. Hidden notes remain hidden on launch; Show All Notes explicitly reopens them. **All Note Windows** selects Ordinary, Desktop (behind apps) or Floating (keep on top), and persists across launches. Desktop windows request all Spaces; actual Spaces behavior remains pending GUI QA. Long notes scroll in the native text editor.
 
 The real UI check confirmed new/edit/long-text/close/reopen and the native Window → Zoom command, then quit/relaunch with both notes and exact stored frames unchanged. CUA corner-drag positioning remains unreliable; repeated title-drag calls sometimes returned success without changing the saved frame. Do not treat this as complete verification of mouse edge resizing or arbitrary mouse dragging.
 
@@ -63,3 +63,10 @@ Double-click the native title bar/grip, or choose **Collapse Note / Expand Note*
 Every arrangement first saves a device-local snapshot to `layout.json`. **Restore Previous Layout** restores frame and folded state only, including across app restarts, while preserving subsequent edits, colors, visibility and new notes. Only currently visible notes participate in an arrangement. A display change constrains restored visible frames to available screens. Overflow stays on screen and overlaps when there is insufficient room; Canvas remains available to browse every note.
 
 The snapshot and notes file are separate atomic writes, not a transaction. A failed snapshot write prevents arrangement; if the later notes write fails, the saved before-image remains available for Restore. Corrupt or future-version layout data is preserved and layout-changing actions are disabled. `bash scripts/test-layout-store.sh` exercises isolated 50-note/restart/failed-write behavior without opening windows. Actual double-click/fold rendering remains pending GUI QA.
+
+
+## Desktop and Floating
+
+Use **All Note Windows** in the menu bar, Notes menu, note actions or Canvas's Window Layout menu. **Desktop — Behind Apps** places note windows above the desktop background/icons and below ordinary applications, requesting all Spaces. **Floating — Keep on Top** keeps notes above normal windows. **Ordinary Windows** retains conventional window behavior. Canvas always stays an ordinary resizable window for editing every note, even while independent note windows are hidden behind apps.
+
+Modes are device-local in `preferences.json`; existing Keep Notes on Top preferences migrate automatically. Failed writes leave the previous mode active. `bash scripts/test-window-mode.sh` checks preferences, restart, constants and failure protection without windows. Actual click-through/occlusion, Spaces, fullscreen and Mission Control behavior are **not yet GUI-verified**.

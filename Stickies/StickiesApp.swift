@@ -13,9 +13,7 @@ struct StickiesApp: App {
             Button("Open Canvas") { CanvasWindowController.shared.show() }.keyboardShortcut("0", modifiers: [.command, .shift])
             Button("Show All Notes") { NoteStore.shared.showAll() }
             Button("Hide All Notes") { store.hideAll() }
-            Toggle("Keep Notes on Top", isOn: Binding(
-                get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
-            ))
+            WindowModeCommands()
             Divider()
             ArrangementCommands()
             Divider()
@@ -29,9 +27,7 @@ struct StickiesApp: App {
                 Button("Hide All Notes") { store.hideAll() }
                 Divider()
                 ArrangementCommands()
-                Toggle("Keep Notes on Top", isOn: Binding(
-                    get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
-                ))
+                WindowModeCommands()
             }
         }
     }
