@@ -59,7 +59,7 @@ PY
 cp docs/DELIVERY.md "$PACKAGE/START-HERE.txt"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
-lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/Stickies"
+lipo "$APP/Contents/MacOS/Stickies" -verify_arch arm64 x86_64
 plutil -lint "$APP/Contents/Info.plist"
 (
     cd "$PACKAGE"
