@@ -8,8 +8,9 @@ struct StickiesApp: App {
 
     var body: some Scene {
         MenuBarExtra("Stickies", systemImage: "note.text") {
-            Button("New Note") { NoteStore.shared.createNote() }
+            Button("New Note") { CanvasWindowController.shared.createNote() }
                 .keyboardShortcut("n")
+            Button("Open Canvas") { CanvasWindowController.shared.show() }.keyboardShortcut("0", modifiers: [.command, .shift])
             Button("Show All Notes") { NoteStore.shared.showAll() }
             Button("Hide All Notes") { store.hideAll() }
             Toggle("Keep Notes on Top", isOn: Binding(
@@ -23,7 +24,8 @@ struct StickiesApp: App {
         }
         .commands {
             CommandMenu("Notes") {
-                Button("New Note") { store.createNote() }.keyboardShortcut("n")
+                Button("New Note") { CanvasWindowController.shared.createNote() }.keyboardShortcut("n")
+                Button("Open Canvas") { CanvasWindowController.shared.show() }.keyboardShortcut("0", modifiers: [.command, .shift])
                 Button("Show All Notes") { store.showAll() }
                 Button("Hide All Notes") { store.hideAll() }
                 Divider()
