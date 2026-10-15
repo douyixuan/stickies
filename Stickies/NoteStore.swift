@@ -104,6 +104,7 @@ final class NoteStore: ObservableObject {
     func setColor(_ id: UUID, _ color: Int) {
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].color = color
+        windows[id]?.backgroundColor = NotePalette.color(color)
         save()
     }
 
@@ -160,6 +161,22 @@ final class NoteStore: ObservableObject {
         )
         window.setFrame(note.frame, display: false)
         window.title = windowTitle(for: note)
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.backgroundColor = NotePalette.color(note.color)
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.layoutAttribute = .right
+        let header = NSHostingView(rootView: NoteHeaderControls(noteID: id))
+        header.frame = NSRect(x: 0, y: 0, width: 60, height: 22)
+        header.toolTip = "Note actions and colors. Drag the empty title bar to move this note."
+        accessory.view = header
+        window.addTitlebarAccessoryViewController(accessory)
+        let dragAccessory = NSTitlebarAccessoryViewController()
+        dragAccessory.layoutAttribute = .left
+        let dragHint = NoteDragHint(frame: NSRect(x: 0, y: 0, width: 24, height: 22))
+        dragHint.toolTip = "Drag this title bar to move the note. Select text below to edit."
+        dragAccessory.view = dragHint
+        window.addTitlebarAccessoryViewController(dragAccessory)
         window.level = keepOnTop ? .floating : .normal
         window.minSize = NSSize(width: 180, height: 120)
         window.isReleasedWhenClosed = false

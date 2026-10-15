@@ -4,59 +4,17 @@ struct NoteView: View {
     let noteID: UUID
     @ObservedObject private var store = NoteStore.shared
 
-    private let colors: [Color] = [
-        Color(red: 1.0, green: 0.95, blue: 0.67),
-        Color(red: 0.79, green: 0.91, blue: 1.0),
-        Color(red: 0.88, green: 0.83, blue: 1.0),
-        Color(red: 0.83, green: 0.94, blue: 0.78)
-    ]
-
     var body: some View {
         if let note = store.note(noteID) {
-            VStack(spacing: 0) {
-                HStack {
-                    Menu {
-                        Button("New Note") { store.createNote() }
-                        Button("Show All Notes") { store.showAll() }
-                        Button("Hide This Note") { store.hide(noteID) }
-                        Divider()
-                        Button("Arrange Grid") { store.arrange(.grid) }
-                        Button("Arrange List") { store.arrange(.list) }
-                        Divider()
-                        Toggle("Keep Notes on Top", isOn: Binding(
-                            get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
-                        ))
-                    } label: {
-                        Image(systemName: "note.text")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .help("Note actions")
-                    Spacer()
-                    Menu {
-                        ForEach(0..<colors.count, id: \.self) { index in
-                            Button("Color \(index + 1)") {
-                                store.setColor(noteID, index)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "paintpalette")
-                    }
-                    .menuStyle(.borderlessButton)
-                }
-                .foregroundStyle(.black.opacity(0.55))
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-
-                TextEditor(text: Binding(
-                    get: { store.note(noteID)?.text ?? "" },
-                    set: { store.updateText(noteID, $0) }
-                ))
-                .font(.system(size: 15))
-                .foregroundStyle(.black)
-                .scrollContentBackground(.hidden)
-                .padding(8)
-            }
-            .background(colors[((note.color % colors.count) + colors.count) % colors.count])
+            TextEditor(text: Binding(
+                get: { store.note(noteID)?.text ?? "" },
+                set: { store.updateText(noteID, $0) }
+            ))
+            .font(.system(size: 15))
+            .foregroundStyle(.black)
+            .scrollContentBackground(.hidden)
+            .padding(8)
+            .background(Color(nsColor: NotePalette.color(note.color)))
             .overlay(alignment: .bottom) {
                 if let error = store.persistenceError {
                     Text(error).font(.caption).foregroundStyle(.red)
@@ -64,5 +22,48 @@ struct NoteView: View {
                 }
             }
         }
+    }
+}
+
+/// Menus share the native title bar; no extra toolbar row covers the editor.
+struct NoteHeaderControls: View {
+    let noteID: UUID
+    @ObservedObject private var store = NoteStore.shared
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Menu {
+                Button("New Note") { store.createNote() }
+                Button("Show All Notes") { store.showAll() }
+                Button("Hide This Note") { store.hide(noteID) }
+                Divider()
+                Button("Arrange Grid") { store.arrange(.grid) }
+                Button("Arrange List") { store.arrange(.list) }
+                Divider()
+                Toggle("Keep Notes on Top", isOn: Binding(
+                    get: { store.keepOnTop }, set: { store.setKeepOnTop($0) }
+                ))
+            } label: {
+                Image(systemName: "note.text")
+            }
+            .accessibilityLabel("Note actions")
+            .help("Note actions")
+            Menu {
+                ForEach(0..<NotePalette.colors.count, id: \.self) { index in
+                    Button("Color \(index + 1)") { store.setColor(noteID, index) }
+                }
+            } label: {
+                Image(systemName: "paintpalette")
+            }
+            .accessibilityLabel("Note colors")
+            .help("Note colors")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .font(.system(size: 11))
+        .foregroundStyle(.black.opacity(hovering ? 0.8 : 0.42))
+        .frame(width: 52, height: 22)
+        .onHover { hovering = $0 }
     }
 }
