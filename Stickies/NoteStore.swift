@@ -18,6 +18,27 @@ final class NoteStore: ObservableObject {
     private var windows: [UUID: NSWindow] = [:]
     private var delegates: [UUID: NoteWindowDelegate] = [:]
     private var isArranging = false
+    @Published private(set) var layoutState = NoteLayoutState()
+    @Published private(set) var layoutError: String?
+    private var canSaveLayout = true
+    private var layoutURL: URL { fileURL.deletingLastPathComponent().appendingPathComponent("layout.json") }
+    var canRestoreLayout: Bool { layoutState.snapshot != nil && canSave && canSaveLayout }
+    func isCollapsed(_ id: UUID) -> Bool { layoutState.collapsed.contains(id) }
+
+    @discardableResult
+    private func persistLayout(_ state: NoteLayoutState) -> Bool {
+        guard canSave, canSaveLayout else { return false }
+        do {
+            try state.validate()
+            try JSONEncoder().encode(state).write(to: layoutURL, options: .atomic)
+            layoutState = state
+            layoutError = nil
+            return true
+        } catch {
+            layoutError = "Layout could not be saved. No layout changes were applied: \(error.localizedDescription)"
+            return false
+        }
+    }
     @Published private(set) var persistenceError: String?
     private var canSave = true
     private var lockFD: Int32 = -1
@@ -57,6 +78,16 @@ final class NoteStore: ObservableObject {
         if let data = try? Data(contentsOf: preferencesURL),
            let preferences = try? JSONDecoder().decode(Preferences.self, from: data) {
             keepOnTop = preferences.keepOnTop
+        }
+        if FileManager.default.fileExists(atPath: layoutURL.path) {
+            do {
+                let state = try JSONDecoder().decode(NoteLayoutState.self, from: Data(contentsOf: layoutURL))
+                try state.validate()
+                layoutState = state
+            } catch {
+                canSaveLayout = false
+                layoutError = "Could not read layout.json. Original file preserved; arrangement and collapse are disabled."
+            }
         }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
@@ -145,22 +176,24 @@ final class NoteStore: ObservableObject {
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].visible = true
         if let existing = windows[id] {
-            let restoredFrame = LayoutEngine.restore(existing.frame, screens: NSScreen.screens.map(\.visibleFrame))
+            let expandedFrame = restoredPresentation(id: id, frame: notes[index].frame, screens: NSScreen.screens.map(\.visibleFrame))
+            let restoredFrame = layoutState.renderedFrame(id: id, expanded: expandedFrame)
             existing.setFrame(restoredFrame, display: true)
-            notes[index].frame = existing.frame
+            notes[index].frame = layoutState.expandedFrame(id: id, rendered: existing.frame, previous: notes[index].frame)
             if existing.isMiniaturized { existing.deminiaturize(nil) }
             existing.makeKeyAndOrderFront(nil)
             save()
             return
         }
-        notes[index].frame = LayoutEngine.restore(notes[index].frame, screens: NSScreen.screens.map(\.visibleFrame))
+        notes[index].frame = restoredPresentation(id: id, frame: notes[index].frame, screens: NSScreen.screens.map(\.visibleFrame))
         let note = notes[index]
-        let window = NSWindow(
+        let window = NoteWindow(
             contentRect: note.frame,
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
+        window.onTitleDoubleClick = { [weak self] in self?.toggleCollapse(id) }
         window.setFrame(note.frame, display: false)
         window.title = windowTitle(for: note)
         window.titleVisibility = .hidden
@@ -176,6 +209,7 @@ final class NoteStore: ObservableObject {
         let dragAccessory = NSTitlebarAccessoryViewController()
         dragAccessory.layoutAttribute = .left
         let dragHint = NoteDragHint(frame: NSRect(x: 0, y: 0, width: 24, height: 22))
+        dragHint.onDoubleClick = { [weak self] in self?.toggleCollapse(id) }
         dragHint.toolTip = "Drag this title bar to move the note. Select text below to edit."
         dragAccessory.view = dragHint
         window.addTitlebarAccessoryViewController(dragAccessory)
@@ -187,6 +221,7 @@ final class NoteStore: ObservableObject {
         window.delegate = delegate
         windows[id] = window
         delegates[id] = delegate
+        applyPresentation(id)
         window.makeKeyAndOrderFront(nil)
         save()
     }
@@ -201,21 +236,88 @@ final class NoteStore: ObservableObject {
     func moved(_ id: UUID, frame: CGRect) {
         guard !isArranging,
               let index = notes.firstIndex(where: { $0.id == id }) else { return }
-        notes[index].frame = frame
+        notes[index].frame = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
         save()
     }
 
-    func arrange(_ strategy: Arrangement) {
-        let area = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1200, height: 800)
+    private func restoredPresentation(id: UUID, frame: CGRect, screens: [CGRect]) -> CGRect {
+        let rendered = layoutState.renderedFrame(id: id, expanded: frame)
+        let restored = LayoutEngine.restore(rendered, screens: screens,
+                                            minimumHeight: isCollapsed(id) ? NoteLayoutState.collapsedHeight : 120)
+        return layoutState.expandedFrame(id: id, rendered: restored, previous: frame)
+    }
+
+    private func applyPresentation(_ id: UUID) {
+        guard let note = note(id), let window = windows[id] else { return }
+        let wasArranging = isArranging
+        isArranging = true
+        defer { isArranging = wasArranging }
+        let collapsed = isCollapsed(id)
+        window.minSize = NSSize(width: 180, height: collapsed ? NoteLayoutState.collapsedHeight : 120)
+        if collapsed { window.styleMask.remove(.resizable) } else { window.styleMask.insert(.resizable) }
+        window.titleVisibility = collapsed ? .visible : .hidden
+        window.contentView?.isHidden = collapsed
+        window.setFrame(layoutState.renderedFrame(id: id, expanded: note.frame), display: true, animate: false)
+    }
+
+    func toggleCollapse(_ id: UUID, screens: [CGRect]? = nil) {
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
+        var state = layoutState
+        if state.collapsed.contains(id) { state.collapsed.remove(id) } else { state.collapsed.insert(id) }
+        guard persistLayout(state) else { return }
+        // Only expanding may need to recover a frame moved to a different screen while folded.
+        if !isCollapsed(id), windows[id] != nil || screens != nil {
+            notes[index].frame = LayoutEngine.restore(notes[index].frame, screens: screens ?? NSScreen.screens.map(\.visibleFrame))
+        }
+        applyPresentation(id)
+        save()
+    }
+
+    func arrange(_ strategy: Arrangement, in bounds: CGRect? = nil) {
+        var state = layoutState
+        if strategy == .free {
+            state.arrangement = .free
+            persistLayout(state)
+            return
+        }
         let ids = notes.filter(\.visible).map(\.id)
+        guard !ids.isEmpty else { return }
+        let area = bounds ?? NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1200, height: 800)
         let frames = LayoutEngine.arrange(count: ids.count, in: area, strategy: strategy)
+        guard frames.count == ids.count else { return }
+        state.snapshot = NoteLayoutState.Snapshot(entries: notes.filter(\.visible).map {
+            NoteLayoutState.Entry(id: $0.id, frame: $0.frame, collapsed: isCollapsed($0.id))
+        }, arrangement: layoutState.arrangement)
+        state.arrangement = strategy
+        for id in ids {
+            if strategy == .compact { state.collapsed.insert(id) } else { state.collapsed.remove(id) }
+        }
+        // Durably store the before-image before touching any note frame or live window.
+        guard persistLayout(state) else { return }
         isArranging = true
         defer { isArranging = false; save() }
         for (id, frame) in zip(ids, frames) {
             if let index = notes.firstIndex(where: { $0.id == id }) {
-                notes[index].frame = frame
+                notes[index].frame = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
+                applyPresentation(id)
             }
-            windows[id]?.setFrame(frame, display: true, animate: false)
+        }
+    }
+
+    func restoreLayout(screens: [CGRect]? = nil) {
+        guard let snapshot = layoutState.snapshot else { return }
+        var state = layoutState
+        state.arrangement = snapshot.arrangement
+        for entry in snapshot.entries {
+            if entry.collapsed { state.collapsed.insert(entry.id) } else { state.collapsed.remove(entry.id) }
+        }
+        guard persistLayout(state) else { return }
+        isArranging = true
+        defer { isArranging = false; save() }
+        for entry in snapshot.entries {
+            guard let index = notes.firstIndex(where: { $0.id == entry.id }) else { continue }
+            notes[index].frame = restoredPresentation(id: entry.id, frame: entry.frame, screens: screens ?? NSScreen.screens.map(\.visibleFrame))
+            applyPresentation(entry.id)
         }
     }
 

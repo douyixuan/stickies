@@ -38,7 +38,7 @@ bash scripts/test-layout.sh
 bash scripts/build-local.sh
 ```
 
-The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. Desktop-level/Spaces behavior, collapse, Compact and pre-arrangement Restore remain follow-up work; optional CloudKit is not implemented.
+The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. Desktop-level/Spaces behavior and freeform Canvas cards remain follow-up work; optional CloudKit is not implemented.
 
 On a logged-in Mac, `bash scripts/test-store.sh` additionally checks real AppKit window move callbacks and exact frame/text/color restoration in a second process. It uses a fresh temporary data directory and does not require Accessibility or iCloud permissions. CI runs geometry tests and both build paths; it does not claim to exercise interactive dragging.
 
@@ -55,3 +55,11 @@ Open **Canvas** from the menu bar or Notes menu (**Shift-Command-0**). It lists 
 Search matches all whitespace-separated words, ignoring case and accents. Editing a note so it no longer matches keeps the editor open with a message; changing the search clears a selection that no longer matches. Canvas is a single ordinary resizable window, independent of Keep Notes on Top. This first slice uses a searchable list with an editor, not a freeform card canvas.
 
 `bash scripts/test-canvas.sh` runs without opening windows and uses temporary data. It covers 50 notes (25 hidden), search, new hidden notes, edits, colors, unchanged existing frames/content and fresh-process restoration. GUI focus, shortcuts, close/reopen, actual editing and visibility interactions still require the existing authorized QA workflow; headless results do not establish GUI acceptance.
+
+## Collapse and layout recovery
+
+Double-click the native title bar/grip, or choose **Collapse Note / Expand Note** in a note's actions menu. A folded note keeps its title and controls; dragging it preserves the expanded size. Grid and List expand notes; Compact arranges 32pt folded title windows. **Free Layout** leaves positions alone so you can drag freely. Command-Option-0/1/2/3 select Free/Grid/List/Compact; Command-Option-R restores the previous arrangement.
+
+Every arrangement first saves a device-local snapshot to `layout.json`. **Restore Previous Layout** restores frame and folded state only, including across app restarts, while preserving subsequent edits, colors, visibility and new notes. Only currently visible notes participate in an arrangement. A display change constrains restored visible frames to available screens. Overflow stays on screen and overlaps when there is insufficient room; Canvas remains available to browse every note.
+
+The snapshot and notes file are separate atomic writes, not a transaction. A failed snapshot write prevents arrangement; if the later notes write fails, the saved before-image remains available for Restore. Corrupt or future-version layout data is preserved and layout-changing actions are disabled. `bash scripts/test-layout-store.sh` exercises isolated 50-note/restart/failed-write behavior without opening windows. Actual double-click/fold rendering remains pending GUI QA.

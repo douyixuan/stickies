@@ -1,7 +1,7 @@
 import Foundation
 
 let screen = CGRect(x: -1440, y: 80, width: 1440, height: 820)
-for strategy in [Arrangement.grid, .list] {
+for strategy in [Arrangement.grid, .list, .compact] {
     for count in [0, 1, 4, 50] {
         let frames = LayoutEngine.arrange(count: count, in: screen, strategy: strategy)
         precondition(frames.count == count)
@@ -18,3 +18,6 @@ let frame = CGRect(x: -1000, y: 100, width: 260, height: 220)
 precondition(LayoutEngine.restore(frame, screens: [second, screen]) == frame)
 precondition(LayoutEngine.restore(frame, screens: []) == frame)
 print("PASS: layout boundaries, overflow, deterministic arrangements, small screens, negative coordinates, display recovery")
+
+precondition(LayoutEngine.arrange(count: 50, in: screen, strategy: .free).isEmpty)
+precondition(LayoutEngine.arrange(count: 50, in: screen, strategy: .compact).allSatisfy { $0.height == 32 })
