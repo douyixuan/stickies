@@ -11,5 +11,9 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
+      - name: Test layout geometry
+        run: bash scripts/test-layout.sh
+      - name: Build local preview
+        run: bash scripts/build-local.sh
       - name: Build
         run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO build

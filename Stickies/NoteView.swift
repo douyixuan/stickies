@@ -40,7 +40,13 @@ struct NoteView: View {
                 .scrollContentBackground(.hidden)
                 .padding(8)
             }
-            .background(colors[note.color % colors.count])
+            .background(colors[((note.color % colors.count) + colors.count) % colors.count])
+            .overlay(alignment: .bottom) {
+                if let error = store.persistenceError {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                        .padding(8).background(.regularMaterial)
+                }
+            }
         }
     }
 }

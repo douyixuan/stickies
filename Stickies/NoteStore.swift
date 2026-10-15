@@ -9,10 +9,6 @@ struct StickyNote: Codable, Identifiable {
     var visible: Bool = true
 }
 
-enum Arrangement {
-    case grid, list
-}
-
 @MainActor
 final class NoteStore: ObservableObject {
     static let shared = NoteStore()
@@ -21,8 +17,15 @@ final class NoteStore: ObservableObject {
     private var windows: [UUID: NSWindow] = [:]
     private var delegates: [UUID: NoteWindowDelegate] = [:]
     private var isArranging = false
+    @Published private(set) var persistenceError: String?
+    private var canSave = true
 
     private let fileURL: URL = {
+        if let path = ProcessInfo.processInfo.environment["STICKIES_DATA_DIR"] {
+            let directory = URL(fileURLWithPath: path, isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory.appendingPathComponent("notes.json")
+        }
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Stickies", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -30,9 +33,12 @@ final class NoteStore: ObservableObject {
     }()
 
     private init() {
-        if let data = try? Data(contentsOf: fileURL),
-           let stored = try? JSONDecoder().decode([StickyNote].self, from: data) {
-            notes = stored
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        do {
+            notes = try JSONDecoder().decode([StickyNote].self, from: Data(contentsOf: fileURL))
+        } catch {
+            canSave = false
+            persistenceError = "Could not read notes. Original file preserved at \(fileURL.path). \(error.localizedDescription)"
         }
     }
 
@@ -65,7 +71,20 @@ final class NoteStore: ObservableObject {
     }
 
     func restoreWindows() {
-        for note in notes where note.visible { show(note.id) }
+        if notes.isEmpty && canSave {
+            createNote()
+            if let id = notes.first?.id {
+                updateText(id, "Welcome to Stickies\n\nWrite here. Drag the title bar to move this note, or drag a corner to resize.\n\nUse the menu bar note icon to create notes, change layout, or show hidden notes. Your changes stay on this Mac.")
+            }
+        } else {
+            for note in notes where note.visible { show(note.id) }
+        }
+        if let persistenceError {
+            let alert = NSAlert()
+            alert.messageText = "Stickies could not load your notes"
+            alert.informativeText = persistenceError
+            alert.runModal()
+        }
     }
 
     func show(_ id: UUID) {
@@ -76,6 +95,7 @@ final class NoteStore: ObservableObject {
             save()
             return
         }
+        notes[index].frame = LayoutEngine.restore(notes[index].frame, screens: NSScreen.screens.map(\.visibleFrame))
         let note = notes[index]
         let window = NSWindow(
             contentRect: note.frame,
@@ -83,6 +103,7 @@ final class NoteStore: ObservableObject {
             backing: .buffered,
             defer: false
         )
+        window.setFrame(note.frame, display: false)
         window.title = "Sticky Note"
         window.minSize = NSSize(width: 180, height: 120)
         window.isReleasedWhenClosed = false
@@ -119,20 +140,24 @@ final class NoteStore: ObservableObject {
             if let index = notes.firstIndex(where: { $0.id == id }) {
                 notes[index].frame = frame
             }
-            windows[id]?.setFrame(frame, display: true, animate: true)
+            windows[id]?.setFrame(frame, display: true, animate: false)
         }
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(notes) else { return }
+        guard canSave else { return }
         do {
+            let data = try JSONEncoder().encode(notes)
             try data.write(to: fileURL, options: .atomic)
+            if persistenceError != nil { persistenceError = nil }
         } catch {
+            persistenceError = "Changes could not be saved: \(error.localizedDescription)"
             NSLog("Stickies save failed: %@", error.localizedDescription)
         }
     }
 }
 
+@MainActor
 final class NoteWindowDelegate: NSObject, NSWindowDelegate {
     private let id: UUID
     private weak var store: NoteStore?
@@ -143,7 +168,7 @@ final class NoteWindowDelegate: NSObject, NSWindowDelegate {
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        Task { @MainActor [weak store] in store?.hide(self.id) }
+        store?.hide(id)
         return false
     }
 
@@ -152,6 +177,6 @@ final class NoteWindowDelegate: NSObject, NSWindowDelegate {
 
     private func persistFrame(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
-        Task { @MainActor [weak store] in store?.moved(self.id, frame: window.frame) }
+        store?.moved(id, frame: window.frame)
     }
 }
