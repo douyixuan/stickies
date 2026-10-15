@@ -36,6 +36,13 @@ struct StoreSmoke {
             let screen = NSScreen.main!.visibleFrame
             let frame = LayoutEngine.constrain(CGRect(x: screen.minX + 50, y: screen.minY + 50, width: 310, height: 240), to: screen)
             let window = NSApplication.shared.windows.first { $0.title == "Persistence smoke test" }!
+            precondition(window.titlebarAccessoryViewControllers.count == 2)
+            precondition(window.frame.height - window.contentLayoutRect.height <= 36)
+            window.setFrame(NSRect(x: screen.minX + 50, y: screen.minY + 50, width: 180, height: 120), display: true)
+            precondition(window.contentLayoutRect.width >= 180)
+            precondition(!window.isMovableByWindowBackground)
+            let accessories = window.titlebarAccessoryViewControllers.map { $0.view.convert($0.view.bounds, to: nil) }
+            precondition(!accessories[0].intersects(accessories[1]))
             window.setFrame(frame, display: true)
             precondition(store.note(note.id)?.frame == frame)
             window.miniaturize(nil)
