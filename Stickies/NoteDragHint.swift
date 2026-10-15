@@ -53,4 +53,3 @@ enum NoteWindowMode: String, Codable, CaseIterable {
         self == .desktop ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : []
     }
 }
-
