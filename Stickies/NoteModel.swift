@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// The only model eligible for a future cloud record. No device presentation state.
 struct NoteContent: Codable, Equatable, Identifiable {
