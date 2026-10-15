@@ -35,7 +35,6 @@ struct NoteHeaderControls: View {
         HStack(spacing: 4) {
             Menu {
                 Button("New Note") { store.createNote() }
-                Button("Open Canvas") { CanvasWindowController.shared.show() }
                 Button("Show All Notes") { store.showAll() }
                 Button("Hide This Note") { store.hide(noteID) }
                 Divider()

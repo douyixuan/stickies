@@ -2,11 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build/module-cache
-SOURCES=()
-for source in Stickies/*.swift; do
-    [[ "$source" == "Stickies/StickiesApp.swift" ]] || SOURCES+=("$source")
-done
-xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library "${SOURCES[@]}" Tests/StoreSmoke.swift -o build/store-smoke
+xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library Stickies/LayoutEngine.swift Stickies/NotePalette.swift Stickies/NoteDragHint.swift Stickies/NoteStore.swift Stickies/NoteView.swift Tests/StoreSmoke.swift -o build/store-smoke
 TEST_DATA=$(mktemp -d "${TMPDIR:-/tmp}/stickies-test.XXXXXX")
 export STICKIES_DATA_DIR="$TEST_DATA"
 build/store-smoke

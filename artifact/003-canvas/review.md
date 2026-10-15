@@ -10,4 +10,6 @@ Validation: build-local.sh, test-layout.sh and test-canvas.sh on macOS. No app l
 
 GUI acceptance pending: open Canvas via menu and Shift-Command-0; Command-F focus; select/edit a hidden and visible note; verify the latter's open window updates; Command-N must create a selected hidden note in Canvas; Show/Hide Window must affect only that note; close/reopen/minimize/restore Canvas; verify window sizes and actual keyboard routing. Use isolated data with 20–50 notes, never real notes.
 
-PR #4 remains owned by its original workflow. The UI uses its compatible projection API. Integration must preserve both workflows' build/test additions and include all non-App Swift sources in test-store.sh; no PR #4 merge is performed by this task.
+PR #4 remains owned by its original workflow. The UI uses its compatible projection API. The initial integration simulation found PR #4’s explicit headless build source list did not include Canvas. Removed the optional per-note Canvas menu entry so existing NoteView/store test targets remain independent of Canvas; the menu bar and native Notes menu still open Canvas. This also removes the test-store.sh merge conflict. No PR #4 merge is performed by this task.
+
+Final independent follow-up review confirmed the fixture/fresh-process tests solve StickyNote Codable compatibility.

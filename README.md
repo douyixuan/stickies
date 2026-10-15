@@ -50,7 +50,7 @@ The compact header keeps the native title-bar drag area and traffic-light contro
 
 ## Canvas browser and editor
 
-Open **Canvas** from the menu bar, Notes menu, or a note’s actions menu (**Shift-Command-0**). It lists every note, including hidden notes, with live multiword search (**Command-F**), color and visibility status. Select a row to edit the same note; edits also appear in its independent window. **New Note / Command-N** while Canvas is active creates and selects a hidden note in Canvas, without opening another window. **Show Window / Hide Window** changes only the selected note’s window visibility. Closing Canvas does not close or hide any notes.
+Open **Canvas** from the menu bar or Notes menu (**Shift-Command-0**). It lists every note, including hidden notes, with live multiword search (**Command-F**), color and visibility status. Select a row to edit the same note; edits also appear in its independent window. **New Note / Command-N** while Canvas is active creates and selects a hidden note in Canvas, without opening another window. **Show Window / Hide Window** changes only the selected note’s window visibility. Closing Canvas does not close or hide any notes.
 
 Search matches all whitespace-separated words, ignoring case and accents. Editing a note so it no longer matches keeps the editor open with a message; changing the search clears a selection that no longer matches. Canvas is a single ordinary resizable window, independent of Keep Notes on Top. This first slice uses a searchable list with an editor, not a freeform card canvas.
 
