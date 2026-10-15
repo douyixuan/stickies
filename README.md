@@ -38,7 +38,7 @@ bash scripts/test-layout.sh
 bash scripts/build-local.sh
 ```
 
-The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. GUI/Spaces validation and freeform Canvas cards remain follow-up work; optional CloudKit is not implemented.
+The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. GUI/Spaces validation remains follow-up work; optional CloudKit is not implemented.
 
 On a logged-in Mac, `bash scripts/test-store.sh` additionally checks real AppKit window move callbacks and exact frame/text/color restoration in a second process. It uses a fresh temporary data directory and does not require Accessibility or iCloud permissions. CI runs geometry tests and both build paths; it does not claim to exercise interactive dragging.
 
@@ -52,7 +52,7 @@ The compact header keeps the native title-bar drag area and traffic-light contro
 
 Open **Canvas** from the menu bar or Notes menu (**Shift-Command-0**). It lists every note, including hidden notes, with live multiword search (**Command-F**), color and visibility status. Select a row to edit the same note; edits also appear in its independent window. **New Note / Command-N** while Canvas is active creates and selects a hidden note in Canvas, without opening another window. **Show Window / Hide Window** changes only the selected note’s window visibility. Closing Canvas does not close or hide any notes.
 
-Search matches all whitespace-separated words, ignoring case and accents. Editing a note so it no longer matches keeps the editor open with a message; changing the search clears a selection that no longer matches. Canvas is a single ordinary resizable window, independent of Keep Notes on Top. This first slice uses a searchable list with an editor, not a freeform card canvas.
+Search matches all whitespace-separated words, ignoring case and accents. Editing a note so it no longer matches keeps the editor open with a message; changing the search clears a selection that no longer matches. Canvas is a single ordinary resizable window, independent of Keep Notes on Top. Switch List/Board to use either the searchable list or draggable spatial cards alongside the shared editor.
 
 `bash scripts/test-canvas.sh` runs without opening windows and uses temporary data. It covers 50 notes (25 hidden), search, new hidden notes, edits, colors, unchanged existing frames/content and fresh-process restoration. GUI focus, shortcuts, close/reopen, actual editing and visibility interactions still require the existing authorized QA workflow; headless results do not establish GUI acceptance.
 
@@ -70,3 +70,10 @@ The snapshot and notes file are separate atomic writes, not a transaction. A fai
 Use **All Note Windows** in the menu bar, Notes menu, note actions or Canvas's Window Layout menu. **Desktop — Behind Apps** places note windows above the desktop background/icons and below ordinary applications, requesting all Spaces. **Floating — Keep on Top** keeps notes above normal windows. **Ordinary Windows** retains conventional window behavior. Canvas always stays an ordinary resizable window for editing every note, even while independent note windows are hidden behind apps.
 
 Modes are device-local in `preferences.json`; existing Keep Notes on Top preferences migrate automatically. Failed writes leave the previous mode active. `bash scripts/test-window-mode.sh` checks preferences, restart, constants and failure protection without windows. Actual click-through/occlusion, Spaces, fullscreen and Mission Control behavior are **not yet GUI-verified**.
+
+
+## Canvas Board
+
+Switch **List / Board** in Canvas. Click a card to edit it on the right; drag cards to organize them freely. **Arrange Board** offers Free/Grid/List/Compact and Restore Board. Unlike desktop arrangements, the scrollable board expands to keep all 20–50 cards accessible without overlapping its generated layouts. Hidden notes remain included.
+
+Board positions are independent of desktop note frames and live in `canvas-layout.json`. Each arrangement commits its previous positions and resulting layout together. Restore retains notes created later. Search displays temporary result positions without modifying the board; clear the search to resume dragging/arranging. Failed writes leave the previous layout active, and corrupt data is preserved. `bash scripts/test-canvas-board.sh` covers 50 cards, restart/Restore and failure cases without windows. See `artifact/006-canvas-board/qa-handoff.md` for outstanding real-GUI acceptance across all slices.

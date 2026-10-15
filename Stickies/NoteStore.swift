@@ -41,6 +41,8 @@ final class NoteStore: ObservableObject {
     }
     @Published private(set) var persistenceError: String?
     private var canSave = true
+    var localStateWritable: Bool { canSave }
+    var localDataDirectory: URL { fileURL.deletingLastPathComponent() }
     private var lockFD: Int32 = -1
     private var isLockedByAnotherInstance = false
     @Published private(set) var keepOnTop = false
