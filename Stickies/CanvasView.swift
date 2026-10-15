@@ -17,6 +17,7 @@ final class CanvasWindowController: ObservableObject {
     }
 
     func show() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
         if let window {
             if window.isMiniaturized { window.deminiaturize(nil) }
             window.makeKeyAndOrderFront(nil)
@@ -39,6 +40,7 @@ struct CanvasView: View {
     @ObservedObject private var store = NoteStore.shared
     @ObservedObject private var controller = CanvasWindowController.shared
     @State private var query = ""
+    @State private var showBoard = false
     @State private var selection: UUID?
     @FocusState private var searchFocused: Bool
 
@@ -49,6 +51,10 @@ struct CanvasView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                Picker("Browse", selection: $showBoard) {
+                    Text("List").tag(false)
+                    Text("Board").tag(true)
+                }.pickerStyle(.segmented).frame(width: 130)
                 Image(systemName: "magnifyingglass")
                 TextField("Search all notes", text: $query)
                     .textFieldStyle(.roundedBorder)
@@ -78,6 +84,8 @@ struct CanvasView: View {
                         ContentUnavailableView(query.isEmpty ? "No Notes" : "No Matching Notes",
                                                systemImage: "note.text",
                                                description: Text(query.isEmpty ? "Create a note to get started." : "Try different search words."))
+                    } else if showBoard {
+                        CanvasBoardView(selection: $selection, query: query)
                     } else {
                         List(selection: $selection) {
                             ForEach(results) { note in
@@ -99,7 +107,7 @@ struct CanvasView: View {
                         }
                     }
                 }
-                .frame(minWidth: 220, idealWidth: 280, maxWidth: 380)
+                .frame(minWidth: 260, idealWidth: showBoard ? 600 : 280, maxWidth: showBoard ? .infinity : 380)
                 if let selection, let note = store.note(selection) {
                     VStack(spacing: 0) {
                         HStack {
