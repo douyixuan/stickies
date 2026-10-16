@@ -113,11 +113,12 @@ struct CanvasView: View {
                         HStack {
                             Text(CanvasQuery.title(note.text)).font(.headline).lineLimit(1)
                             Spacer()
-                            Menu("Color") {
-                                ForEach(0..<NotePalette.colors.count, id: \.self) { color in
-                                    Button("Color \(color + 1)") { store.setColor(selection, color) }
-                                }
+                            Menu("Color: \(NotePalette.name(note.color))") {
+                                NoteColorOptions(noteID: selection)
                             }
+                            .accessibilityLabel("Note color")
+                            .accessibilityValue(NotePalette.name(note.color))
+                            .help("Note color: \(NotePalette.name(note.color))")
                             Button(note.visible ? "Hide Window" : "Show Window") {
                                 if note.visible { store.hide(selection) } else { store.show(selection) }
                             }
