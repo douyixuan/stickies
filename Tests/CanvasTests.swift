@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 @main
 struct CanvasTests {
@@ -12,6 +13,21 @@ struct CanvasTests {
     }
     @MainActor
     static func main() throws {
+        // Names and selection must describe the same color even for legacy out-of-range indices.
+        let expected: [(String, [CGFloat])] = [
+            ("Pale Yellow", [1.0, 0.95, 0.67]), ("Light Blue", [0.79, 0.91, 1.0]),
+            ("Lavender", [0.88, 0.83, 1.0]), ("Pale Green", [0.83, 0.94, 0.78])
+        ]
+        precondition(NotePalette.names.count == NotePalette.colors.count)
+        for index in [Int.min, -5, -1, 0, 1, 2, 3, 4, 5, Int.max] {
+            let selected = NotePalette.normalizedIndex(index)
+            precondition((0..<4).contains(selected))
+            precondition(NotePalette.name(index) == expected[selected].0)
+            let color = NotePalette.color(index).usingColorSpace(.sRGB)!
+            let components = [color.redComponent, color.greenComponent, color.blueComponent]
+            precondition(zip(components, expected[selected].1).allSatisfy { abs($0 - $1) < 0.00001 })
+        }
+        precondition(NotePalette.normalizedIndex(-1) == 3 && NotePalette.normalizedIndex(4) == 0)
         // No NSApplication, NSWindow or user data: fixture must live in an explicit temp directory.
         guard let path = ProcessInfo.processInfo.environment["STICKIES_DATA_DIR"] else {
             fatalError("An isolated data directory is required")

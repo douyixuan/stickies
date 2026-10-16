@@ -8,7 +8,14 @@ enum NotePalette {
         NSColor(srgbRed: 0.83, green: 0.94, blue: 0.78, alpha: 1)
     ]
 
-    static func color(_ index: Int) -> NSColor {
-        colors[((index % colors.count) + colors.count) % colors.count]
+    // Names describe the existing sRGB colors; persisted indices and values stay unchanged.
+    static let names = ["Pale Yellow", "Light Blue", "Lavender", "Pale Green"]
+
+    static func normalizedIndex(_ index: Int) -> Int {
+        ((index % colors.count) + colors.count) % colors.count
     }
+
+    static func name(_ index: Int) -> String { names[normalizedIndex(index)] }
+
+    static func color(_ index: Int) -> NSColor { colors[normalizedIndex(index)] }
 }

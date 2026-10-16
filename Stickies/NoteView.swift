@@ -48,14 +48,13 @@ struct NoteHeaderControls: View {
             .accessibilityLabel("Note actions")
             .help("Note actions")
             Menu {
-                ForEach(0..<NotePalette.colors.count, id: \.self) { index in
-                    Button("Color \(index + 1)") { store.setColor(noteID, index) }
-                }
+                NoteColorOptions(noteID: noteID)
             } label: {
                 Image(systemName: "paintpalette")
             }
-            .accessibilityLabel("Note colors")
-            .help("Note colors")
+            .accessibilityLabel("Note color")
+            .accessibilityValue(NotePalette.name(store.note(noteID)?.color ?? 0))
+            .help("Note color: \(NotePalette.name(store.note(noteID)?.color ?? 0))")
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -91,5 +90,31 @@ struct WindowModeCommands: View {
             Text("Floating — Keep on Top").tag(NoteWindowMode.floating)
         }
         if let error = store.preferenceError { Text(error).font(.caption) }
+    }
+}
+
+
+/// Both menus use a native single-selection picker for checkmarks and selected semantics.
+struct NoteColorOptions: View {
+    let noteID: UUID
+    @ObservedObject private var store = NoteStore.shared
+
+    var body: some View {
+        if let note = store.note(noteID) {
+            Picker("Note color", selection: Binding(
+                get: { NotePalette.normalizedIndex(store.note(noteID)?.color ?? note.color) },
+                set: { store.setColor(noteID, $0) }
+            )) {
+                ForEach(NotePalette.colors.indices, id: \.self) { index in
+                    Text(NotePalette.name(index))
+                        .accessibilityLabel(NotePalette.name(index))
+                        .accessibilityAddTraits(NotePalette.normalizedIndex(note.color) == index ? .isSelected : [])
+                        .tag(index)
+                }
+            }
+            .pickerStyle(.inline)
+            .accessibilityLabel("Note color")
+            .accessibilityValue(NotePalette.name(note.color))
+        }
     }
 }
