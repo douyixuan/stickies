@@ -6,6 +6,7 @@ import CloudKit
     static let shared = CloudSyncController()
     @Published private(set) var coordinator: SyncCoordinator
     @Published var setupError: String?
+    @Published private(set) var selectedFolderPath: String?
     @Published private(set) var settingUp = false
     private struct FolderChoice: Codable { var bookmark: Data; var id: UUID }
     private var choiceURL: URL { NoteStore.shared.localDataDirectory.appendingPathComponent("sync-folder.json") }
@@ -23,6 +24,7 @@ import CloudKit
                 let url = try URL(resolvingBookmarkData: choice.bookmark, options: [.withSecurityScope, .withoutUI], relativeTo: nil, bookmarkDataIsStale: &stale)
                 guard !stale else { throw SyncCoordinator.Failure.blocked("Choose the sync folder again to renew access.") }
                 coordinator = makeFolderCoordinator(url, id: choice.id)
+                selectedFolderPath = url.path
             } catch { setupError = "Reconnect your selected sync folder. Existing data and history are preserved." }
         }
     }
@@ -57,7 +59,7 @@ import CloudKit
                 next.disable()
                 guard !next.pendingDisable else { throw SyncCoordinator.Failure.blocked("Could not save the disabled sync setting.") }
                 try JSONEncoder().encode(FolderChoice(bookmark: bookmark, id: manifest.id)).write(to: choiceURL, options: .atomic)
-                coordinator = next; setupError = nil; start()
+                coordinator = next; selectedFolderPath = folder.path; setupError = nil; start()
             } catch { setupError = error.localizedDescription }
         }
     }
@@ -96,6 +98,7 @@ struct SyncSettingsHost: View {
                 Button("Open Existing Sync Folder…") { controller.chooseFolder(create: false) }
             }.disabled(controller.settingUp || controller.coordinator.ledger.enabled || controller.coordinator.busy)
             Text("First Mac: create a folder in your cloud drive. Other Mac: connect the same folder after it appears in Finder. Enable folder sync each time the app starts. No Apple developer account is required. A local folder works too, but transfer requires a cloud drive.").font(.caption)
+            if let path = controller.selectedFolderPath { Text("Sync folder: " + path).font(.caption).textSelection(.enabled) }
             if let error = controller.setupError { Text(error).foregroundStyle(.orange) }
             SyncSettingsView(sync: controller.coordinator, notes: .shared)
                 .id(controller.coordinator.scope)

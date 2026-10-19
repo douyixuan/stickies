@@ -19,6 +19,10 @@ The app starts with sync off.
 8. Select the same sync folder.
 9. Select **Enable Sync for Selected Notes**.
 
+The app shows the selected folder path.
+Both Macs must open the same iStickies2 folder, not its parent folder.
+The folder contains `istickies-sync.json` and an `events` directory.
+
 An empty selection downloads existing notes without uploading old local notes.
 After you enable sync, new notes also sync.
 Only note text and colors sync.
