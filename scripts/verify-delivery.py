@@ -58,6 +58,16 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
             target.write_bytes(archive.read(entry))
             target.chmod((entry.external_attr >> 16) & 0o777)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(payload)], check=True)
+        checker = payload/'Contents/MacOS/NoteDataCheck'
+        assert checker.is_file() and checker.stat().st_mode & 0o111
+        assert set(subprocess.check_output(['lipo', '-archs', str(checker)], text=True).split()) == {'arm64', 'x86_64'}
+        fixture = Path(directory)/'notes.json'
+        fixture.write_text('{"schemaVersion":2,"contents":[],"localStates":[],"future":{"preserved":true}}')
+        before = fixture.read_bytes()
+        subprocess.run([str(checker), str(fixture)], check=True)
+        assert fixture.read_bytes() == before and not (fixture.parent/'notes.lock').exists()
+        fixture.write_text('{"schemaVersion":999}')
+        assert subprocess.run([str(checker), str(fixture)]).returncode != 0
         architectures = subprocess.check_output(['lipo', '-archs', str(payload/'Contents/MacOS'/info['CFBundleExecutable'])], text=True).split()
         assert set(architectures) == {'arm64', 'x86_64'}
 print('PASS: one iStickies2 app, stable identity, icon sizes, all hashes, executable mode, universal signature')

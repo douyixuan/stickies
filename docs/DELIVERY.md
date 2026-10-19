@@ -37,3 +37,33 @@ Command-N 新建；Shift-Command-0 打开 Canvas；Canvas 中 Command-F 搜索�
 正式显示名为 **iStickies2**，带有独立图标。公开包保持 `dev.douyixuan.stickies.delivery` 和原 `Stickies Delivery` 数据目录，改名不改数据身份。历史 QA 用户不能直接用公开包替代原实例：切换必须保留原 QA bundle identity 和其显式数据路径，先正常退出并完整备份数据，具体步骤见仓库 `docs/LAUNCHER-CLEANUP.md`。
 
 构建默认只留下 ZIP 和校验文件。测试/回退版本保存为 ZIP，不长期展开为 `.app`。不要同时保留多个用户入口；已存在的历史副本不会自动删除或注销，需要逐项批准清理。
+
+### Required compatibility check before installation
+
+Never infer a running app's persistence capabilities from its checkout's HEAD.
+Read its recorded build commit and compare that exact source. PR #4 at `369e65b`
+uses schema v2 even when a QA checkout remains on legacy main.
+
+Before replacing an installed bundle, take a private read-only snapshot of the
+selected data directory (exclude `notes.lock`), check that its source hashes did
+not change during copying, and restore it to a second isolated directory to
+verify bytes. A live snapshot covers saved disk bytes only, not unsaved memory.
+Do not quit an existing writer or launch the candidate to perform this check.
+
+Run `python3 scripts/preflight-install.py <staged-payload> <notes.json>` as
+a required gate before replacing the installed app. It verifies the signature,
+calls the **candidate bundle's** `Contents/MacOS/NoteDataCheck` with the existing
+`notes.json` path and verifies its hash is unchanged. A nonzero exit blocks installation. The helper performs the
+same decoder and save/reload projection entirely in memory; it does not acquire
+a lock, write files, launch AppKit, or print note content. Require a fresh check
+immediately before replacement. Keep the old app running until the user closes
+it normally; a passing data check does not authorize starting a second writer.
+
+The delivery compatibility adapter reads PR #4's v2 envelope and legacy arrays.
+It retains the input format and unknown fields at root/content/local-entry/state
+or legacy-note level. It neither migrates arrays nor downgrades v2. Unknown
+schema versions, invalid data and duplicate/mismatched identities fail closed.
+New empty data directories currently retain main's legacy format. Sync, model
+separation and CloudKit remain PR #4's scope. When integrating that branch,
+carry the preservation behavior, helper and compatibility tests into its model
+implementation rather than removing the delivery checks.
