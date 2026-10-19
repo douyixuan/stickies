@@ -58,6 +58,6 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
             target.write_bytes(archive.read(entry))
             target.chmod((entry.external_attr >> 16) & 0o777)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(payload)], check=True)
-        subprocess.run(['lipo', str(payload/'Contents/MacOS'/info['CFBundleExecutable']),
-                        '-verify_arch', 'arm64', 'x86_64'], check=True)
+        architectures = subprocess.check_output(['lipo', '-archs', str(payload/'Contents/MacOS'/info['CFBundleExecutable'])], text=True).split()
+        assert set(architectures) == {'arm64', 'x86_64'}
 print('PASS: one iStickies2 app, stable identity, icon sizes, all hashes, executable mode, universal signature')

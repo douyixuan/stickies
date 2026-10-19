@@ -61,7 +61,6 @@ cp Assets/iStickies2.icns "$APP/Contents/Resources/iStickies2.icns"
 cp docs/DELIVERY.md "$PACKAGE/START-HERE.txt"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
-lipo "$APP/Contents/MacOS/Stickies" -verify_arch arm64 x86_64
 plutil -lint "$APP/Contents/Info.plist"
 python3 scripts/archive-delivery.py "$PACKAGE" "$RELEASE_ROOT/$RELEASE_NAME.zip" "$RELEASE_NAME"
 python3 scripts/verify-delivery.py "$RELEASE_ROOT/$RELEASE_NAME.zip"
