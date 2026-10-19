@@ -44,6 +44,13 @@ import CoreGraphics
             for unsafe in [mismatched, duplicate] {
                 do { _ = try CompatibleNoteFile.decode(JSONSerialization.data(withJSONObject: unsafe)); fatalError("Accepted invalid identities") } catch { }
             }
+            let precise = "1.123456789012345678901234567890123456789012345678901234567890"
+            let preciseData = Data("{\"schemaVersion\":2,\"contents\":[],\"localStates\":[],\"extension\":\(precise)}".utf8)
+            let exact = try CompatibleNoteFile.encode([], preserving: preciseData)
+            precondition(String(decoding: exact, as: UTF8.self).contains(precise))
+            for duplicateKey in ["{\"schemaVersion\":2,\"schemaVersion\":2,\"contents\":[],\"localStates\":[]}", "{\"schemaVersion\":2,\"contents\":[],\"localStates\":[],\"x\":{\"a\":1,\"a\":2}}"] {
+                do { _ = try CompatibleNoteFile.decode(Data(duplicateKey.utf8)); fatalError("Accepted duplicate keys") } catch { }
+            }
             // Install gates must reject future, malformed and ambiguous identities.
             for data in [Data("{\"schemaVersion\":3}".utf8), Data("{broken".utf8), try JSONEncoder().encode([StickyNote(id:id), StickyNote(id:id)])] {
                 do { _ = try CompatibleNoteFile.decode(data); fatalError("Accepted unsafe data") } catch { }

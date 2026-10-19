@@ -26,7 +26,7 @@ for architecture in arm64 x86_64; do
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
         -target "${architecture}-apple-macosx14.0" Stickies/*.swift -o "$RELEASE_STAGE/Stickies-$architecture"
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
-        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Tools/NoteDataCheck.swift -o "$RELEASE_STAGE/check-$architecture"
+        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Tools/NoteDataCheck.swift -o "$RELEASE_STAGE/check-$architecture"
 done
 lipo -create "$RELEASE_STAGE/check-arm64" "$RELEASE_STAGE/check-x86_64" -output "$APP/Contents/MacOS/NoteDataCheck"
 codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/NoteDataCheck"

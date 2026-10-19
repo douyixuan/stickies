@@ -17,6 +17,7 @@ enum CompatibleNoteFile {
     }
 
     static func decode(_ data: Data) throws -> [StickyNote] {
+        _ = try LosslessJSON.parse(data)
         let raw = try JSONSerialization.jsonObject(with: data)
         let decoder = JSONDecoder()
         let notes: [StickyNote]
@@ -45,36 +46,35 @@ enum CompatibleNoteFile {
 
     static func encode(_ notes: [StickyNote], preserving original: Data?) throws -> Data {
         guard Set(notes.map(\.id)).count == notes.count else { throw Failure.duplicateIdentity }
-        let fresh = try JSONSerialization.jsonObject(with: JSONEncoder().encode(notes)) as! [[String: Any]]
-        guard let original else { return try JSONSerialization.data(withJSONObject: fresh, options: [.sortedKeys]) }
-        _ = try decode(original) // Unknown/corrupt formats must never be overwritten.
-        let raw = try JSONSerialization.jsonObject(with: original)
-        func indexed(_ entries: [[String: Any]]) -> [UUID: [String: Any]] {
-            Dictionary(uniqueKeysWithValues: entries.map { (UUID(uuidString: $0["id"] as! String)!, $0) })
+        let fresh = try LosslessJSON.parse(JSONEncoder().encode(notes)).array!
+        guard let original else { return try LosslessJSON.array(fresh).data() }
+        _ = try decode(original)
+        let raw = try LosslessJSON.parse(original)
+        func indexed(_ entries: [LosslessJSON]) -> [UUID: [String: LosslessJSON]] {
+            Dictionary(uniqueKeysWithValues: entries.map { (UUID(uuidString: $0.object!["id"]!.string!)!, $0.object!) })
         }
-        func overlay(_ base: [String: Any], _ values: [String: Any]) -> [String: Any] {
-            base.merging(values) { _, new in new }
+        func overlay(_ base: [String: LosslessJSON], _ values: [String: LosslessJSON]) -> LosslessJSON {
+            .object(base.merging(values) { _, new in new })
         }
-        let result: Any
-        if let legacy = raw as? [[String: Any]] {
+        if let legacy = raw.array {
             let previous = indexed(legacy)
-            result = zip(notes, fresh).map { note, fields in overlay(previous[note.id] ?? [:], fields) }
-        } else {
-            var envelope = raw as! [String: Any]
-            let contents = indexed(envelope["contents"] as! [[String: Any]])
-            let locals = indexed(envelope["localStates"] as! [[String: Any]])
-            envelope["contents"] = zip(notes, fresh).map { note, fields in
-                overlay(contents[note.id] ?? [:], ["id": fields["id"]!, "text": fields["text"]!, "color": fields["color"]!])
-            }
-            envelope["localStates"] = zip(notes, fresh).map { note, fields in
-                var entry = locals[note.id] ?? [:]
-                entry["id"] = fields["id"]
-                entry["state"] = overlay(entry["state"] as? [String: Any] ?? [:], ["frame": fields["frame"]!, "visible": fields["visible"]!])
-                return entry
-            }
-            result = envelope
+            return try LosslessJSON.array(zip(notes, fresh).map { note, fields in overlay(previous[note.id] ?? [:], fields.object!) }).data()
         }
-        return try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])
+        var envelope = raw.object!
+        let contents = indexed(envelope["contents"]!.array!)
+        let locals = indexed(envelope["localStates"]!.array!)
+        envelope["contents"] = .array(zip(notes, fresh).map { note, value in
+            let fields = value.object!
+            return overlay(contents[note.id] ?? [:], ["id": fields["id"]!, "text": fields["text"]!, "color": fields["color"]!])
+        })
+        envelope["localStates"] = .array(zip(notes, fresh).map { note, value in
+            let fields = value.object!
+            var entry = locals[note.id] ?? [:]
+            entry["id"] = fields["id"]
+            entry["state"] = overlay(entry["state"]?.object ?? [:], ["frame": fields["frame"]!, "visible": fields["visible"]!])
+            return .object(entry)
+        })
+        return try LosslessJSON.object(envelope).data()
     }
 
     static func save(_ notes: [StickyNote], to url: URL) throws {
