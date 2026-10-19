@@ -17,6 +17,8 @@ jobs:
         run: bash scripts/test-layout.sh
       - name: Compile without creating a launcher app
         run: bash scripts/build-local.sh
+      - name: Test sync durability with simulated transport (no iCloud)
+        run: bash scripts/test-sync.sh
       - name: Test v2 compatibility and read-only installation gate
         run: bash scripts/test-compatibility.sh
       - name: Test Canvas without opening windows

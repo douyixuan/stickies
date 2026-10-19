@@ -7,7 +7,7 @@ import zipfile
 package, destination, name = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 entries = [(p, 'iStickies2.app/' + p.relative_to(package / 'payload').as_posix())
            for p in sorted((package / 'payload').rglob('*')) if p.is_file()]
-entries.append((package / 'START-HERE.txt', 'START-HERE.txt'))
+entries.extend((package / name, name) for name in ['START-HERE.txt', 'SYNC.md'])
 checksums = ''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {relative}\n' for p, relative in entries)
 # Exclusive creation protects previous releases. Preserve Unix executable modes via write().
 with zipfile.ZipFile(destination, 'x', compression=zipfile.ZIP_DEFLATED) as archive:

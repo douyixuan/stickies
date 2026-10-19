@@ -71,7 +71,32 @@ import CoreGraphics
             let store = NoteStore.shared
             precondition(store.localStateWritable && store.persistenceError == nil && store.notes.count > 0)
             let note = store.notes[0]
-            if mode == "edit" {
+            if mode == "sync" {
+                let frame = note.frame
+                let visible = note.visible
+                let before = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: Any]
+                try store.applySync(SyncValue(content: NoteContent(id: note.id, text: "remote test", color: 4)))
+                let changed = store.note(note.id)!
+                precondition(changed.frame == frame && changed.visible == visible)
+                let after = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: Any]
+                precondition((before["localStates"] as! NSArray).isEqual(after["localStates"]))
+                precondition((before["extension"] as! NSDictionary).isEqual(after["extension"]))
+                let imported = SyncValue(content: NoteContent(text: "imported test"))
+                try store.applySync(imported)
+                precondition(store.note(imported.id)?.visible == false)
+                let memory = store.notes
+                try FileManager.default.removeItem(at: file)
+                try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+                do {
+                    try store.applySync(SyncValue(content: NoteContent(id: note.id, text: "must not apply", color: 1)))
+                    fatalError("Accepted failed disk write")
+                } catch { }
+                precondition(store.notes.count == memory.count && zip(store.notes, memory).allSatisfy { a, b in a.id == b.id && a.text == b.text && a.color == b.color && a.frame == b.frame && a.visible == b.visible })
+                try FileManager.default.removeItem(at: file)
+                try CompatibleNoteFile.save(memory, to: file)
+                try store.applySync(SyncValue(content: NoteContent(id: imported.id, text: ""), deleted: true))
+                precondition(store.note(imported.id) == nil)
+            } else if mode == "edit" {
                 store.updateText(note.id, note.text + "\ncompatibility isolated regression")
                 store.hide(note.id)
                 store.toggleCollapse(note.id, screens: [CGRect(x:0,y:0,width:1200,height:800)])
