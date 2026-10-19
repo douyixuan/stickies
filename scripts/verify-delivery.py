@@ -8,6 +8,9 @@ import sys
 import tempfile
 import zipfile
 
+if not __debug__:
+    sys.exit("Run archive verification without Python optimization")
+
 with zipfile.ZipFile(sys.argv[1]) as archive:
     names = archive.namelist()
     assert len(names) == len(set(names)), 'Duplicate archive entries'
@@ -15,6 +18,8 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert len(roots) == 1
     root = next(iter(roots)) + '/'
     app = root + 'iStickies2.app/'
+    assert {root + 'START-HERE.txt', root + 'SYNC.md', root + 'SHA256SUMS.txt'}.issubset(names)
+    assert archive.read(root + 'SYNC.md').decode('utf-8').strip(), 'Missing sync instructions'
     assert all(n.startswith(app) or n in {root + 'START-HERE.txt', root + 'SYNC.md', root + 'SHA256SUMS.txt'} for n in names)
     assert not any('.app/' in n[len(app):] for n in names if n.startswith(app))
     info = plistlib.loads(archive.read(app + 'Contents/Info.plist'))
