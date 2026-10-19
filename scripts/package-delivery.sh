@@ -8,19 +8,19 @@ if [[ -n "$(git status --porcelain --untracked-files=normal -- . ':!Stickies.xco
 fi
 RELEASE_COMMIT=$(git rev-parse HEAD)
 RELEASE_SHORT=$(git rev-parse --short=12 HEAD)
-RELEASE_VERSION=0.2.0
+RELEASE_VERSION=0.2.1
 RELEASE_BUILD="0.2.$(git rev-list --count HEAD)"
-RELEASE_NAME="Stickies-${RELEASE_VERSION}-${RELEASE_SHORT}-universal2"
+RELEASE_NAME="iStickies2-${RELEASE_VERSION}-${RELEASE_SHORT}-universal2"
 RELEASE_ROOT="$PWD/build/releases"
-mkdir -p "$RELEASE_ROOT" build/module-cache
+mkdir -p "$RELEASE_ROOT" build/module-cache build/.artifacts.noindex
 if [[ -e "$RELEASE_ROOT/$RELEASE_NAME" || -e "$RELEASE_ROOT/$RELEASE_NAME.zip" ]]; then
     echo "Release already exists; refusing to overwrite $RELEASE_NAME" >&2
     exit 1
 fi
-RELEASE_STAGE=$(mktemp -d "$PWD/build/release-stage.XXXXXX")
+RELEASE_STAGE=$(mktemp -d "$PWD/build/.artifacts.noindex/release.XXXXXX")
 trap 'rm -rf "$RELEASE_STAGE"' EXIT
 PACKAGE="$RELEASE_STAGE/$RELEASE_NAME"
-APP="$PACKAGE/Stickies Delivery.app"
+APP="$PACKAGE/payload"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 for architecture in arm64 x86_64; do
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
@@ -44,9 +44,10 @@ metadata = {
 info = {
     'CFBundleExecutable': 'Stickies',
     'CFBundleIdentifier': 'dev.douyixuan.stickies.delivery',
-    'CFBundleName': 'Stickies Delivery',
-    'CFBundleDisplayName': 'Stickies Delivery',
+    'CFBundleName': 'iStickies2',
+    'CFBundleDisplayName': 'iStickies2',
     'CFBundlePackageType': 'APPL',
+    'CFBundleIconFile': 'iStickies2.icns',
     'CFBundleShortVersionString': metadata['version'],
     'CFBundleVersion': metadata['build'],
     'StickiesGitCommit': metadata['commit'],
@@ -56,20 +57,15 @@ info = {
 (app/'Contents/Info.plist').write_bytes(plistlib.dumps(info))
 (app/'Contents/Resources/BuildInfo.json').write_text(json.dumps(metadata, indent=2)+'\n')
 PY
+cp Assets/iStickies2.icns "$APP/Contents/Resources/iStickies2.icns"
 cp docs/DELIVERY.md "$PACKAGE/START-HERE.txt"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
 lipo "$APP/Contents/MacOS/Stickies" -verify_arch arm64 x86_64
 plutil -lint "$APP/Contents/Info.plist"
-(
-    cd "$PACKAGE"
-    shasum -a 256 'Stickies Delivery.app/Contents/MacOS/Stickies' \
-        'Stickies Delivery.app/Contents/Info.plist' \
-        'Stickies Delivery.app/Contents/Resources/BuildInfo.json' START-HERE.txt > SHA256SUMS.txt
-    shasum -a 256 -c SHA256SUMS.txt
-)
-mv "$PACKAGE" "$RELEASE_ROOT/$RELEASE_NAME"
-ditto -c -k --sequesterRsrc --keepParent "$RELEASE_ROOT/$RELEASE_NAME" "$RELEASE_ROOT/$RELEASE_NAME.zip"
+python3 scripts/archive-delivery.py "$PACKAGE" "$RELEASE_ROOT/$RELEASE_NAME.zip" "$RELEASE_NAME"
+python3 scripts/verify-delivery.py "$RELEASE_ROOT/$RELEASE_NAME.zip"
+python3 Tests/ArchiveValidationTests.py "$RELEASE_ROOT/$RELEASE_NAME.zip"
 (
     cd "$RELEASE_ROOT"
     shasum -a 256 "$RELEASE_NAME.zip" > "$RELEASE_NAME.zip.sha256"

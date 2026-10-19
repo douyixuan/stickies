@@ -9,9 +9,15 @@ targets:
   Stickies:
     type: application
     platform: macOS
-    sources: [Stickies]
+    sources:
+      - path: Stickies
+      - path: Assets/iStickies2.icns
+        buildPhase: resources
     settings:
       base:
+        PRODUCT_NAME: iStickies2
+        INFOPLIST_KEY_CFBundleDisplayName: iStickies2
+        INFOPLIST_KEY_CFBundleIconFile: iStickies2.icns
         PRODUCT_BUNDLE_IDENTIFIER: dev.douyixuan.stickies
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSUIElement: YES
