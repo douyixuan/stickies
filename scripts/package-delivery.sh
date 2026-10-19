@@ -8,8 +8,8 @@ if [[ -n "$(git status --porcelain --untracked-files=normal -- . ':!Stickies.xco
 fi
 RELEASE_COMMIT=$(git rev-parse HEAD)
 RELEASE_SHORT=$(git rev-parse --short=12 HEAD)
-RELEASE_VERSION=0.2.1
-RELEASE_BUILD="0.2.$(git rev-list --count HEAD)"
+RELEASE_VERSION=0.3.0
+RELEASE_BUILD="0.3.$(git rev-list --count HEAD)"
 RELEASE_NAME="iStickies2-${RELEASE_VERSION}-${RELEASE_SHORT}-universal2"
 RELEASE_ROOT="$PWD/build/releases"
 mkdir -p "$RELEASE_ROOT" build/module-cache build/.artifacts.noindex
@@ -63,6 +63,7 @@ info = {
 PY
 cp Assets/iStickies2.icns "$APP/Contents/Resources/iStickies2.icns"
 cp docs/DELIVERY.md "$PACKAGE/START-HERE.txt"
+cp docs/SYNC.md "$PACKAGE/SYNC.md"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
 plutil -lint "$APP/Contents/Info.plist"

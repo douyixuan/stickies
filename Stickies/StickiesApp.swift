@@ -17,6 +17,8 @@ struct StickiesApp: App {
             Divider()
             ArrangementCommands()
             Divider()
+            Button("iCloud Sync…") { CloudSyncController.shared.show() }
+            Divider()
             Button("Quit iStickies2") { NSApplication.shared.terminate(nil) }
         }
         .commands {
@@ -35,6 +37,10 @@ struct StickiesApp: App {
 
 final class StickiesDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if CloudSyncController.shared.coordinator.pendingDisable {
+            CloudSyncController.shared.show()
+            return .terminateCancel
+        }
         if NoteStore.shared.flushPendingChanges() { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "Some note changes have not been saved"
@@ -50,6 +56,6 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Task { @MainActor in NoteStore.shared.restoreWindows() }
+        Task { @MainActor in NoteStore.shared.restoreWindows(); CloudSyncController.shared.start() }
     }
 }

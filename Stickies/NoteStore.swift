@@ -336,6 +336,26 @@ final class NoteStore: ObservableObject {
         return !hasUnsavedChanges
     }
 
+    var syncValues: [SyncValue] { notes.map { SyncValue(content: NoteContent(id: $0.id, text: $0.text, color: $0.color)) } }
+    var syncStorageOwned: Bool { canSave }
+    var syncWritable: Bool { canSave && !hasUnsavedChanges }
+    func applySync(_ value: SyncValue) throws {
+        guard syncWritable else { throw SyncCoordinator.Failure.blocked("Local notes have unsaved changes or are read-only.") }
+        var updated = notes
+        if value.deleted { updated.removeAll { $0.id == value.id } }
+        else if let index = updated.firstIndex(where: { $0.id == value.id }) {
+            updated[index].text = value.content.text; updated[index].color = value.content.color
+        } else { updated.append(StickyNote(id: value.id, text: value.content.text, color: value.content.color, visible: false)) }
+        // Commit before publishing. Failed remote applies never replace in-memory edits.
+        try CompatibleNoteFile.save(updated, to: fileURL)
+        notes = updated
+        if value.deleted { windows[value.id]?.orderOut(nil) }
+        else if let note = note(value.id) {
+            windows[value.id]?.title = windowTitle(for: note)
+            windows[value.id]?.backgroundColor = NotePalette.color(note.color)
+        }
+    }
+
     private func save() {
         hasUnsavedChanges = true
         guard canSave else { return }
@@ -389,3 +409,5 @@ enum NoteDataLocation {
         return applicationSupport.appendingPathComponent(name, isDirectory: true)
     }
 }
+
+extension NoteStore: SyncLocalStore {}

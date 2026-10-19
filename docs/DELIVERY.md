@@ -67,3 +67,9 @@ New empty data directories currently retain main's legacy format. Sync, model
 separation and CloudKit remain PR #4's scope. When integrating that branch,
 carry the preservation behavior, helper and compatibility tests into its model
 implementation rather than removing the delivery checks.
+
+## Optional sync
+
+See [SYNC.md](SYNC.md) for the iCloud Drive folder procedure and evidence limits.
+The app requires explicit note selection and folder authorization.
+The ad-hoc package does not enable CloudKit.

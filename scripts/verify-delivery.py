@@ -15,7 +15,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert len(roots) == 1
     root = next(iter(roots)) + '/'
     app = root + 'iStickies2.app/'
-    assert all(n.startswith(app) or n in {root + 'START-HERE.txt', root + 'SHA256SUMS.txt'} for n in names)
+    assert all(n.startswith(app) or n in {root + 'START-HERE.txt', root + 'SYNC.md', root + 'SHA256SUMS.txt'} for n in names)
     assert not any('.app/' in n[len(app):] for n in names if n.startswith(app))
     info = plistlib.loads(archive.read(app + 'Contents/Info.plist'))
     assert info['CFBundleName'] == info['CFBundleDisplayName'] == 'iStickies2'

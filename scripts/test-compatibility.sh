@@ -17,5 +17,6 @@ build/bin/NoteDataCheck "$TEST_DATA/notes.json"
 [[ ! -e "$TEST_DATA/notes.lock" ]]
 STICKIES_DATA_DIR="$TEST_DATA" build/compatibility-tests edit
 STICKIES_DATA_DIR="$TEST_DATA" build/compatibility-tests restart
+STICKIES_DATA_DIR="$TEST_DATA" build/compatibility-tests sync
 printf '{"schemaVersion":999}' > "$TEST_DATA/future.json"
 if build/bin/NoteDataCheck "$TEST_DATA/future.json"; then exit 1; fi
