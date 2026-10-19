@@ -15,7 +15,7 @@ jobs:
         run: xcodegen generate
       - name: Test layout geometry
         run: bash scripts/test-layout.sh
-      - name: Build local preview
+      - name: Compile without creating a launcher app
         run: bash scripts/build-local.sh
       - name: Test Canvas without opening windows
         run: bash scripts/test-canvas.sh
@@ -28,6 +28,8 @@ jobs:
       - name: Test crash, lock and pending-save recovery without windows
         run: bash scripts/test-delivery-recovery.sh
       - name: Build
-        run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO build
+        run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath build/.xcode.noindex build
+      - name: Verify Xcode icon and identity
+        run: python3 scripts/verify-xcode-bundle.py build/.xcode.noindex/Build/Products/Debug/iStickies2.app
       - name: Package universal delivery candidate without launching
         run: bash scripts/package-delivery.sh

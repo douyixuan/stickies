@@ -9,12 +9,16 @@ targets:
   Stickies:
     type: application
     platform: macOS
-    sources: [Stickies]
+    sources:
+      - path: Stickies
+      - path: Assets/iStickies2.icns
+        buildPhase: resources
     settings:
       base:
+        PRODUCT_NAME: iStickies2
         PRODUCT_BUNDLE_IDENTIFIER: dev.douyixuan.stickies
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_LSUIElement: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Assets/Info.plist
         CODE_SIGNING_ALLOWED: NO
         SWIFT_EMIT_LOC_STRINGS: YES
         ENABLE_APP_SANDBOX: YES

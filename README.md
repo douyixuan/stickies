@@ -1,4 +1,4 @@
-# Stickies
+# iStickies2
 
 Native macOS spatial sticky notes, built with SwiftUI and AppKit. Local-first, with iCloud sync planned.
 
@@ -29,9 +29,9 @@ Requires a Mac with Xcode. Current milestone: independent note windows, drag/res
 bash scripts/preview.sh
 ```
 
-This builds `build/Stickies.app` without XcodeGen, downloads, iCloud, or signing credentials. It opens a welcome note on first launch. The preview process is named Stickies Preview to distinguish it from Apple’s built-in Stickies. Edit the note, drag its title bar, resize a corner, and use the menu bar note icon for new notes, colors, grid/list arrangement and quit. Closing a note hides it; Show All Notes brings it back. Overflowing arrangements overlap within the current screen.
+The preview command explicitly builds `build/preview.noindex/iStickies2 Preview.app` without XcodeGen, downloads, iCloud, or signing credentials. It opens a welcome note on first launch. The preview process is named iStickies2 Preview to distinguish it from Apple’s built-in Stickies. Edit the note, drag its title bar, resize a corner, and use the menu bar note icon for new notes, colors, grid/list arrangement and quit. Closing a note hides it; Show All Notes brings it back. Overflowing arrangements overlap within the current screen.
 
-The preview script keeps notes in `build/preview-data/notes.json`, separate from normal app data. Quit and rerun the same script to verify text, color, visibility, window size and position restore. `preview.sh` launches through macOS LaunchServices with the isolated data directory. The app locks its data directory; another instance using that directory reports the conflict and exits without writing. Opening `build/Stickies.app` directly also uses `build/preview-data`. The regular Xcode-built app uses Application Support. Corrupt data is preserved and reported; saving is disabled for that run.
+The preview script keeps notes in `build/preview-data/notes.json`, separate from normal app data. Quit and rerun the same script to verify text, color, visibility, window size and position restore. `preview.sh` launches through macOS LaunchServices with the isolated data directory. The app locks its data directory; another instance using that directory reports the conflict and exits without writing. Opening the explicit preview app directly also uses `build/preview-data`. The regular Xcode-built app uses Application Support. Corrupt data is preserved and reported; saving is disabled for that run.
 
 ```sh
 bash scripts/test-layout.sh
@@ -80,6 +80,15 @@ Board positions are independent of desktop note frames and live in `canvas-layou
 
 ## Delivery candidate
 
-After committing a reviewed clean tree, run `bash scripts/package-delivery.sh` to create a universal app and ZIP under `build/releases`, with full commit metadata and SHA-256 checksums. This builds and ad-hoc signs only; it does not install, launch, notarize, or use signing credentials. The delivery app uses its own stable `Application Support/Stickies Delivery` profile across copies. See [launch, backup and rollback instructions](docs/DELIVERY.md).
+After committing a reviewed clean tree, run `bash scripts/package-delivery.sh` to create a ZIP containing one `iStickies2.app` under `build/releases`, with full commit metadata and SHA-256 checksums. This builds and ad-hoc signs only; it does not install, launch, notarize, or use signing credentials. The delivery app uses its own stable `Application Support/Stickies Delivery` profile across copies. See [launch, backup and rollback instructions](docs/DELIVERY.md).
 
 `bash scripts/test-delivery-recovery.sh` exercises isolated failed-save retry, corrupt/future data preservation, concurrent lock exclusion, and restart after terminating only its own test process. Normal quit retries unsaved note changes and asks to keep editing if saving still fails. The dialog and installation remain subject to authorized GUI QA. See [independent review boundaries](artifact/007-delivery/review.md).
+
+
+## App identity and launcher hygiene
+
+The user-facing app is **iStickies2**, with a bundled multi-resolution icon distinct from Apple's Stickies. Existing bundle IDs and data directories are intentionally retained. A new name does not migrate your notes.
+
+`build-local.sh` now compiles only a binary; it does not create a discoverable app. Do not run that bare binary: it has no preview bundle identity. Use the explicit preview script for isolated development. `preview.sh` is the explicit opt-in to build and launch a developer preview, preserving `build/preview-data`. Release staging uses a non-`.app` payload in a private `.noindex` directory and retains only ZIP/checksum artifacts. Packaging does not install, launch, unregister apps or clean existing copies. `.noindex` is not a guarantee about third-party launcher caches. See [the reversible cleanup and switch plan](docs/LAUNCHER-CLEANUP.md).
+
+The icon source is `Assets/iStickies2.png`; `scripts/build-icon.sh` regenerates the checked-in ICNS at 16–1024 pixels. `verify-delivery.py` validates archived metadata, icon representations, hashes, executable permissions and universal signature without producing a discoverable `.app` or launching anything.

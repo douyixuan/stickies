@@ -7,7 +7,7 @@ struct StickiesApp: App {
     @NSApplicationDelegateAdaptor(StickiesDelegate.self) private var delegate
 
     var body: some Scene {
-        MenuBarExtra("Stickies", systemImage: "note.text") {
+        MenuBarExtra("iStickies2", systemImage: "note.text") {
             Button("New Note") { CanvasWindowController.shared.createNote() }
                 .keyboardShortcut("n")
             Button("Open Canvas") { CanvasWindowController.shared.show() }.keyboardShortcut("0", modifiers: [.command, .shift])
@@ -17,7 +17,7 @@ struct StickiesApp: App {
             Divider()
             ArrangementCommands()
             Divider()
-            Button("Quit Stickies") { NSApplication.shared.terminate(nil) }
+            Button("Quit iStickies2") { NSApplication.shared.terminate(nil) }
         }
         .commands {
             CommandMenu("Notes") {
