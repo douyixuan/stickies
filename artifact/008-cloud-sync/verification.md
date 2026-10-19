@@ -29,3 +29,5 @@
 第二轮独立 review 未发现新增阻塞。三次重建实例 probe 均保持停用、零请求、磁盘文件不变，显式启用后才传输。证据目录 /tmp/stickies-consent-review._1067cj6。
 
 通用云盘目录与删除恢复追加验证：32 条状态断言通过，双副本删除/恢复收敛通过。修复失败删除后恢复覆盖新编辑的问题：恢复要求本地不存在且无 pending。CI 标准 runner 从长时间未分配的 macos-15 改为官方 GA macos-26，测试步骤保持不变。
+
+最终补查：ad-hoc 非 launcher 测试包为自身空目录创建并恢复 security-scoped bookmark 成功，不代表真实 picker 或云盘验收。Xcode 沙箱配置补 app-scoped bookmark entitlement，独立 review 确认无全盘/网络权限。最终本地 Canvas/布局/窗口/故障恢复回归再次通过。
