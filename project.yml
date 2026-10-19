@@ -16,11 +16,9 @@ targets:
     settings:
       base:
         PRODUCT_NAME: iStickies2
-        INFOPLIST_KEY_CFBundleDisplayName: iStickies2
-        INFOPLIST_KEY_CFBundleIconFile: iStickies2.icns
         PRODUCT_BUNDLE_IDENTIFIER: dev.douyixuan.stickies
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_LSUIElement: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Assets/Info.plist
         CODE_SIGNING_ALLOWED: NO
         SWIFT_EMIT_LOC_STRINGS: YES
         ENABLE_APP_SANDBOX: YES
