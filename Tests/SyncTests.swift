@@ -96,7 +96,10 @@ import Foundation
         deletion.enable(selected: [a.id]); await deletion.cycle()
         deleteLocal.failApply = true; deletion.deleteEverywhere(a.id)
         deleteLocal.syncValues[0].content.text = "edited after failed delete"
-        deleteLocal.failApply = false; deletion = engine(deleteLocal, deleteCloud, "delete-recovery")
+        deleteLocal.failApply = false
+        deletion.restoreDeleted(a.id)
+        check(deleteLocal.syncValues[0].content.text == "edited after failed delete", "Restore cannot overwrite an existing note after failed deletion")
+        deletion = engine(deleteLocal, deleteCloud, "delete-recovery")
         await deletion.cycle(); check(deletion.conflicts.contains(a.id), "Delete recovery retains newer local edit as conflict")
         deletion.resolve(a.id, useCloud: false); await deletion.cycle()
         check(deleteCloud.records[a.id]?.value.deleted == false && deleteCloud.records[a.id]?.value.content.text == "edited after failed delete", "Keep local must clear old tombstone")

@@ -19,3 +19,5 @@ NSFileCoordinator 保护本机读写，跨设备并发依靠 DAG 多头保留，
 文件夹身份不等于 Apple 账户绑定。每次启动必须重新显式启用，运行时账户变化暂停。
 设置中互斥禁用旧引擎控制，提交切换前复核旧实例 off/idle 与本地写权限。
 无存储锁实例不得写停用标记或 folder choice。每个 scope 重置首次选择。
+
+用户补充按 Obsidian vault 模型交付。文件夹路线不要求开发者会员，也不再限制 iCloud ubiquitous 属性。用户可选择本地或云盘目录，云盘负责传输；首次创建或打开同一 manifest 目录。UI 优先文件夹入口，不显示与此路线无关的 CloudKit 签名要求。

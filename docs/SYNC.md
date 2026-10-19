@@ -1,19 +1,21 @@
 # Sync notes between Macs
 
-## iCloud Drive folder
+## Sync folder
 
 This mode uses a folder that you select in the system file picker.
 The app reads and writes only its sync folder.
-The app does not search your iCloud Drive.
+The app does not search your cloud drive.
+This mode does not require an Apple developer account.
+A local folder also works, but a cloud drive must transfer files between Macs.
 The app starts with sync off.
 
-1. On the first Mac, open **iCloud Sync…**.
-2. Select **Create iCloud Drive Sync Folder…**.
-3. Select a parent folder in iCloud Drive.
+1. On the first Mac, open **Sync Folder…**.
+2. Select **Create Sync Folder…**.
+3. Select a parent folder in your cloud drive, such as iCloud Drive.
 4. Select the local notes that you want to sync.
 5. Select **Enable Sync for Selected Notes**.
 6. On the other Mac, wait for the new folder to appear in Finder.
-7. Select **Connect Existing Folder…**.
+7. Select **Open Existing Sync Folder…**.
 8. Select the same sync folder.
 9. Select **Enable Sync for Selected Notes**.
 
@@ -23,15 +25,15 @@ Only note text and colors sync.
 Each Mac keeps its window positions, layouts, visibility, and floating mode.
 
 Each app launch requires you to enable folder sync again.
-Folder access does not prove an Apple account identity.
+Folder access does not prove a cloud account identity.
 Before you enable sync, make sure that the selected folder belongs to the intended account.
 The app pauses sync after an account-change notification.
 A request that the app already sent can finish after you turn sync off.
 
 The status reports a local folder save.
-It does not prove that iCloud finished an upload or another Mac received a change.
-iCloud Drive controls transfer timing.
-If the status reports a missing revision, wait for iCloud Drive to download the folder.
+It does not prove that the cloud drive finished an upload or another Mac received a change.
+Your cloud drive controls transfer timing.
+If the status reports a missing revision, wait for your cloud drive to download the folder.
 Then select **Sync Now**.
 
 ## Conflicts and deletion
@@ -44,6 +46,9 @@ The app records that choice as a new revision.
 Closing a note hides it on that Mac.
 **Delete Everywhere** removes the note from active synced notes.
 Offline Macs receive the deletion after they reconnect.
+The app retains a recovery copy for notes that existed on this Mac before deletion.
+Select **Restore Deleted Note** to restore that copy.
+Enable sync to send the restored note to other Macs.
 Historical files retain previous note text.
 Deletion does not securely erase history or provider backups.
 

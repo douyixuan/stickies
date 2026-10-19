@@ -37,6 +37,10 @@ import Foundation
         precondition(tryRead(second, id: id)[0].value == right, "Second simulated device converges")
         sync.deleteEverywhere(left.id); await sync.cycle(); try exchange(first, second)
         precondition(tryRead(second, id: id)[0].value.deleted, "Deletion marker reaches second replica")
+        precondition(sync.recoverableIDs.contains(left.id), "Deletion retains a recovery copy")
+        sync.restoreDeleted(left.id); await sync.cycle(); try exchange(first, second)
+        precondition(tryRead(second, id: id)[0].value == right, "Restored note reaches other replica")
+        sync.deleteEverywhere(left.id); await sync.cycle(); try exchange(first, second)
         // Provider reordering must fail closed until a referenced parent arrives.
         let files = try fm.contentsOfDirectory(at: second.appendingPathComponent("events"), includingPropertiesForKeys: nil)
         let baseHead = try JSONDecoder().decode([String].self, from: base.systemFields)[0]

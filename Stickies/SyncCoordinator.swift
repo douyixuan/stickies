@@ -13,6 +13,7 @@ import Combine
         var outbound: SyncValue?
         var conflict: CloudNote?
         var deleted: SyncValue?
+        var recovery: SyncValue?
         var resolutionRequested = false
     }
     struct Ledger: Codable {
@@ -43,6 +44,7 @@ import Combine
     var write: (Data, URL) throws -> Void = { try $0.write(to: $1, options: .atomic) }
     var scope: String { transport.scope }
     var availability: String? { transport.availability }
+    var recoverableIDs: [UUID] { ledger.entries.filter { $0.value.deleted != nil && $0.value.recovery != nil && $0.value.pending == nil && current($0.key) == nil }.map(\.key).sorted { $0.uuidString < $1.uuidString } }
     var conflicts: [UUID] { ledger.entries.filter { $0.value.conflict != nil }.map(\.key).sorted { $0.uuidString < $1.uuidString } }
 
     init(local: SyncLocalStore, transport: SyncTransport, file: URL) {
@@ -53,7 +55,7 @@ import Combine
                 let state = try JSONDecoder().decode(Ledger.self, from: Data(contentsOf: file))
                 guard state.version == 1, state.scope == transport.scope,
                       state.entries.allSatisfy({ id, e in
-                          [e.base?.value.id, e.pending?.after.id, e.pending?.before?.id, e.outbound?.id, e.conflict?.value.id, e.deleted?.id].compactMap { $0 }.allSatisfy { $0 == id }
+                          [e.base?.value.id, e.pending?.after.id, e.pending?.before?.id, e.outbound?.id, e.conflict?.value.id, e.deleted?.id, e.recovery?.id].compactMap { $0 }.allSatisfy { $0 == id }
                       }) else { throw Failure.blocked("Sync history is incompatible. Original files are preserved.") }
                 ledger = state
             } catch { storageInvalid = true; blocked = true; status = "Sync history could not be read. Original files are preserved; sync is blocked." }
@@ -61,7 +63,7 @@ import Combine
         if FileManager.default.fileExists(atPath: offMarker.path) { ledger.enabled = false }
         if transport.requiresLaunchConsent && ledger.enabled {
             ledger.enabled = false
-            status = "Confirm the selected iCloud Drive folder, then enable sync for this session. Folder access is not proof of an Apple account."
+            status = "Confirm the selected sync folder, then enable sync for this session. Folder access does not verify your cloud account."
         }
         if !local.syncWritable { blocked = true; status = "This notes folder is read-only or already open elsewhere." }
     }
@@ -110,6 +112,9 @@ import Combine
     private func recover(_ id: UUID) throws {
         guard let pending = ledger.entries[id]?.pending else { return }
         let now = current(id)
+        if pending.after.deleted, let before = pending.before, !before.deleted {
+            try change { $0.entries[id]?.recovery = before }
+        }
         if !matches(now, pending.after) {
             guard now == pending.before else {
                 if let ancestor = pending.ancestor {
@@ -142,6 +147,13 @@ import Combine
             }
             try recover(id)
             status = "Deletion queued. It will sync when connected; closing a note still only hides it."
+        } catch { status = error.localizedDescription }
+    }
+    func restoreDeleted(_ id: UUID) {
+        guard !busy, current(id) == nil, ledger.entries[id]?.pending == nil, ledger.entries[id]?.deleted != nil, let value = ledger.entries[id]?.recovery else { return }
+        do {
+            try apply(value, ancestor: ledger.entries[id]?.base)
+            status = "Restored on this Mac. Enable sync to send the restored note."
         } catch { status = error.localizedDescription }
     }
     func resolve(_ id: UUID, useCloud: Bool, variant: SyncValue? = nil) {

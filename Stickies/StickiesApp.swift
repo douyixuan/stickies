@@ -17,7 +17,7 @@ struct StickiesApp: App {
             Divider()
             ArrangementCommands()
             Divider()
-            Button("iCloud Sync…") { CloudSyncController.shared.show() }
+            Button("Sync Folder…") { CloudSyncController.shared.show() }
             Divider()
             Button("Quit iStickies2") { NSApplication.shared.terminate(nil) }
         }

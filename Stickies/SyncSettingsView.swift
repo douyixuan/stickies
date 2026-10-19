@@ -23,7 +23,7 @@ import CloudKit
                 let url = try URL(resolvingBookmarkData: choice.bookmark, options: [.withSecurityScope, .withoutUI], relativeTo: nil, bookmarkDataIsStale: &stale)
                 guard !stale else { throw SyncCoordinator.Failure.blocked("Choose the sync folder again to renew access.") }
                 coordinator = makeFolderCoordinator(url, id: choice.id)
-            } catch { setupError = "Reconnect your selected iCloud Drive folder. Existing data and history are preserved." }
+            } catch { setupError = "Reconnect your selected sync folder. Existing data and history are preserved." }
         }
     }
     private func makeFolderCoordinator(_ url: URL, id: UUID) -> SyncCoordinator {
@@ -36,7 +36,7 @@ import CloudKit
         let previous = coordinator
         let picker = NSOpenPanel()
         picker.canChooseFiles = false; picker.canChooseDirectories = true; picker.allowsMultipleSelection = false
-        picker.message = create ? "Choose a parent folder in iCloud Drive. iStickies2 will create its own sync folder there. No notes upload until you select them and enable sync." : "Choose the iStickies2 sync folder created on your first Mac. Only that folder is accessed."
+        picker.message = create ? "Choose a parent folder in your cloud drive. iStickies2 will create its own sync folder there. No notes upload until you select them and enable sync." : "Choose the iStickies2 sync folder created on your first Mac. Only that folder is accessed."
         picker.prompt = create ? "Create Sync Folder" : "Connect Sync Folder"
         guard picker.runModal() == .OK, let selected = picker.url else { settingUp = false; return }
         Task {
@@ -45,7 +45,6 @@ import CloudKit
             defer { if access { selected.stopAccessingSecurityScopedResource() } }
             do {
                 let folder = try await Task.detached { () throws -> URL in
-                    try SyncFolder.requireCloud(selected)
                     return create ? try SyncFolder.create(in: selected) : selected
                 }.value
                 let manifest = try await Task.detached { try SyncFolder.coordinated(folder, writing: false) { try SyncFolder.manifest($0) } }.value
@@ -80,7 +79,7 @@ import CloudKit
     func show() {
         if window == nil {
             let result = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 620), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-            result.title = "iCloud Sync — iStickies2"
+            result.title = "Sync Folder — iStickies2"
             result.contentView = NSHostingView(rootView: SyncSettingsHost(controller: self))
             result.isReleasedWhenClosed = false; result.center(); window = result
         }
@@ -93,10 +92,10 @@ struct SyncSettingsHost: View {
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
-                Button("Create iCloud Drive Sync Folder…") { controller.chooseFolder(create: true) }
-                Button("Connect Existing Folder…") { controller.chooseFolder(create: false) }
+                Button("Create Sync Folder…") { controller.chooseFolder(create: true) }
+                Button("Open Existing Sync Folder…") { controller.chooseFolder(create: false) }
             }.disabled(controller.settingUp || controller.coordinator.ledger.enabled || controller.coordinator.busy)
-            Text("First Mac: create a folder in iCloud Drive. Other Mac: connect the same folder after it appears in Finder. Confirm and enable folder sync each time the app starts; folder access does not verify your Apple account.").font(.caption)
+            Text("First Mac: create a folder in your cloud drive. Other Mac: connect the same folder after it appears in Finder. Enable folder sync each time the app starts. No Apple developer account is required. A local folder works too, but transfer requires a cloud drive.").font(.caption)
             if let error = controller.setupError { Text(error).foregroundStyle(.orange) }
             SyncSettingsView(sync: controller.coordinator, notes: .shared)
                 .id(controller.coordinator.scope)
@@ -112,12 +111,11 @@ struct SyncSettingsView: View {
     @State private var deleting: UUID?
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("iCloud Sync").font(.title2.bold())
+            Text("Sync Folder").font(.title2.bold())
             Text("Sync note text and colors between your Macs. Window positions, hidden state and layouts stay on each Mac.")
                 .foregroundStyle(.secondary)
-            if let problem = sync.availability {
-                Text("CloudKit: " + problem).foregroundStyle(.secondary)
-                Text("Use the iCloud Drive folder buttons above. That route does not require a CloudKit container.").font(.caption)
+            if sync.availability != nil {
+                Text("Create a sync folder on your first Mac, or open the same folder on your other Mac.").font(.caption)
             }
             Text(sync.status).font(.callout).textSelection(.enabled)
             HStack {
@@ -154,12 +152,19 @@ struct SyncSettingsView: View {
                         }
                     }
                 }
+                ForEach(sync.recoverableIDs, id: \.self) { id in
+                    HStack {
+                        Text("Deleted: " + (sync.ledger.entries[id]?.recovery?.content.text ?? "")).lineLimit(2)
+                        Spacer()
+                        Button("Restore Deleted Note") { sync.restoreDeleted(id) }.disabled(sync.busy || sync.blocked)
+                    }
+                }
                 ForEach(sync.conflicts, id: \.self) { id in
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Conflicting versions").font(.headline)
                         Text("This Mac (color \(notes.note(id)?.color ?? 0)): " + (notes.note(id)?.text ?? "Deleted on this Mac")).textSelection(.enabled)
                         if let remote = sync.ledger.entries[id]?.conflict?.value {
-                            Text("iCloud (color \(remote.content.color)): " + (remote.deleted ? "Deleted in iCloud" : remote.content.text)).textSelection(.enabled)
+                            Text("Cloud (color \(remote.content.color)): " + (remote.deleted ? "Deleted in cloud folder" : remote.content.text)).textSelection(.enabled)
                         }
                         if let versions = sync.ledger.entries[id]?.conflict?.alternatives {
                             ForEach(Array(versions.enumerated()), id: \.offset) { index, value in
@@ -171,7 +176,7 @@ struct SyncSettingsView: View {
                         }
                         HStack {
                             Button("Keep This Mac’s Version") { sync.resolve(id, useCloud: false) }
-                            Button("Use iCloud Version") { sync.resolve(id, useCloud: true) }
+                            Button("Use Cloud Version") { sync.resolve(id, useCloud: true) }
                         }.disabled(sync.busy)
                     }.padding(.vertical, 8)
                 }

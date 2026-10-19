@@ -34,7 +34,7 @@ enum SyncFolder {
         guard value.version == 1 else { throw SyncCoordinator.Failure.blocked("Unsupported sync folder version.") }
         return value
     }
-    static func create(in parent: URL, requireICloud: Bool = true) throws -> URL {
+    static func create(in parent: URL, requireICloud: Bool = false) throws -> URL {
         if requireICloud { try requireCloud(parent) }
         return try coordinated(parent, writing: true) { parent in
             let value = Manifest()
@@ -102,11 +102,11 @@ enum SyncFolder {
     let id: UUID
     private let requireICloud: Bool
     private let access: Bool
-    var scope: String { "iCloudDrive/" + id.uuidString }
+    var scope: String { "SyncFolder/" + id.uuidString }
     var availability: String? { nil }
-    var requiresLaunchConsent: Bool { requireICloud }
-    var completionMessage: String { "Saved to the selected folder. iCloud Drive manages upload and download when connected." }
-    init(folder: URL, id: UUID, requireICloud: Bool = true) {
+    var requiresLaunchConsent: Bool { true }
+    var completionMessage: String { "Saved to the selected folder. Your cloud drive manages transfer between Macs." }
+    init(folder: URL, id: UUID, requireICloud: Bool = false) {
         self.folder = folder; self.id = id; self.requireICloud = requireICloud
         access = folder.startAccessingSecurityScopedResource()
     }
