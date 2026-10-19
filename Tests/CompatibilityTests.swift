@@ -51,6 +51,14 @@ import CoreGraphics
             for duplicateKey in ["{\"schemaVersion\":2,\"schemaVersion\":2,\"contents\":[],\"localStates\":[]}", "{\"schemaVersion\":2,\"contents\":[],\"localStates\":[],\"x\":{\"a\":1,\"a\":2}}"] {
                 do { _ = try CompatibleNoteFile.decode(Data(duplicateKey.utf8)); fatalError("Accepted duplicate keys") } catch { }
             }
+            for token in ["1e400", "-1e9999", "1e-9999"] {
+                let large = Data(("{\"schemaVersion\":2,\"contents\":[],\"localStates\":[],\"extension\":" + token + "}").utf8)
+                let saved = try CompatibleNoteFile.encode([], preserving: large)
+                precondition(String(decoding: saved, as: UTF8.self).contains(token))
+            }
+            for malformed in ["{", "{ ", "[1,]", "{\"a\":1,}", "01", "1.", "1e", "+1", "NaN", "\"unterminated", "\"bad\\q\""] {
+                do { _ = try LosslessJSON.parse(Data(malformed.utf8)); fatalError("Accepted invalid JSON") } catch { }
+            }
             // Install gates must reject future, malformed and ambiguous identities.
             for data in [Data("{\"schemaVersion\":3}".utf8), Data("{\"schemaVersion\":2.00000000000000000000000000000000000000000000000001,\"contents\":[],\"localStates\":[]}".utf8), Data("{broken".utf8), try JSONEncoder().encode([StickyNote(id:id), StickyNote(id:id)])] {
                 do { _ = try CompatibleNoteFile.decode(data); fatalError("Accepted unsafe data") } catch { }

@@ -1,14 +1,13 @@
 import Foundation
 
 /// Preserves scalar tokens verbatim, including extension numbers beyond Decimal precision.
-/// Foundation validates JSON syntax first; this parser also rejects duplicate object keys.
+/// Lexical validation preserves arbitrary number tokens and rejects duplicate object keys.
 indirect enum LosslessJSON {
     case object([String: LosslessJSON]), array([LosslessJSON]), scalar(String)
     var object: [String: LosslessJSON]? { if case let .object(v) = self { return v }; return nil }
     var array: [LosslessJSON]? { if case let .array(v) = self { return v }; return nil }
     var string: String? { if case let .scalar(v) = self { return try? JSONDecoder().decode(String.self, from: Data(v.utf8)) }; return nil }
     static func parse(_ data: Data) throws -> Self {
-        _ = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
         var parser = Parser(bytes: Array(data))
         let result = try parser.value()
         parser.space()
@@ -31,6 +30,7 @@ indirect enum LosslessJSON {
         var index = 0
         mutating func space() { while index < bytes.count && [9,10,13,32].contains(bytes[index]) { index += 1 } }
         mutating func token() throws -> String {
+            guard index < bytes.count else { throw CompatibleNoteFile.Failure.invalidDocument }
             let start = index
             if bytes[index] == 34 {
                 index += 1
@@ -43,9 +43,16 @@ indirect enum LosslessJSON {
                 while index < bytes.count && ![9,10,13,32,44,93,125].contains(bytes[index]) { index += 1 }
             }
             guard index > start && index <= bytes.count else { throw CompatibleNoteFile.Failure.invalidDocument }
-            return String(decoding: bytes[start..<index], as: UTF8.self)
+            guard let result = String(bytes: bytes[start..<index], encoding: .utf8) else { throw CompatibleNoteFile.Failure.invalidDocument }
+            if bytes[start] == 34 {
+                _ = try JSONDecoder().decode(String.self, from: Data(result.utf8))
+            } else if !["true", "false", "null"].contains(result) {
+                guard result.range(of: #"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$"#, options: .regularExpression) != nil else { throw CompatibleNoteFile.Failure.invalidDocument }
+            }
+            return result
         }
-        mutating func value() throws -> LosslessJSON {
+        mutating func value(depth: Int = 0) throws -> LosslessJSON {
+            guard depth < 512 else { throw CompatibleNoteFile.Failure.invalidDocument }
             space()
             guard index < bytes.count else { throw CompatibleNoteFile.Failure.invalidDocument }
             if bytes[index] == 123 {
@@ -57,7 +64,7 @@ indirect enum LosslessJSON {
                     let key = try JSONDecoder().decode(String.self, from: Data(token().utf8))
                     guard fields[key] == nil else { throw CompatibleNoteFile.Failure.invalidDocument }
                     space(); guard index < bytes.count && bytes[index] == 58 else { throw CompatibleNoteFile.Failure.invalidDocument }
-                    index += 1; fields[key] = try value(); space()
+                    index += 1; fields[key] = try value(depth: depth + 1); space()
                     guard index < bytes.count else { throw CompatibleNoteFile.Failure.invalidDocument }
                     let delimiter = bytes[index]; index += 1
                     if delimiter == 125 { return .object(fields) }
@@ -68,7 +75,7 @@ indirect enum LosslessJSON {
                 var values: [LosslessJSON] = []
                 if index < bytes.count && bytes[index] == 93 { index += 1; return .array(values) }
                 while index < bytes.count {
-                    values.append(try value()); space()
+                    values.append(try value(depth: depth + 1)); space()
                     guard index < bytes.count else { throw CompatibleNoteFile.Failure.invalidDocument }
                     let delimiter = bytes[index]; index += 1
                     if delimiter == 93 { return .array(values) }
