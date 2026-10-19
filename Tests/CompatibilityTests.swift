@@ -52,7 +52,7 @@ import CoreGraphics
                 do { _ = try CompatibleNoteFile.decode(Data(duplicateKey.utf8)); fatalError("Accepted duplicate keys") } catch { }
             }
             // Install gates must reject future, malformed and ambiguous identities.
-            for data in [Data("{\"schemaVersion\":3}".utf8), Data("{broken".utf8), try JSONEncoder().encode([StickyNote(id:id), StickyNote(id:id)])] {
+            for data in [Data("{\"schemaVersion\":3}".utf8), Data("{\"schemaVersion\":2.00000000000000000000000000000000000000000000000001,\"contents\":[],\"localStates\":[]}".utf8), Data("{broken".utf8), try JSONEncoder().encode([StickyNote(id:id), StickyNote(id:id)])] {
                 do { _ = try CompatibleNoteFile.decode(data); fatalError("Accepted unsafe data") } catch { }
                 try data.write(to: file)
                 do { try CompatibleNoteFile.save([], to: file); fatalError("Overwrote unsafe data") } catch { }

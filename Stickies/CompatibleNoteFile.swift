@@ -1,6 +1,5 @@
 import Foundation
 import CoreGraphics
-import CoreFoundation
 
 
 /// Delivery bridge to PR #4's on-disk schema, not a sync or migration engine.
@@ -17,16 +16,13 @@ enum CompatibleNoteFile {
     }
 
     static func decode(_ data: Data) throws -> [StickyNote] {
-        _ = try LosslessJSON.parse(data)
-        let raw = try JSONSerialization.jsonObject(with: data)
+        let raw = try LosslessJSON.parse(data)
         let decoder = JSONDecoder()
         let notes: [StickyNote]
-        if raw is [Any] {
+        if raw.array != nil {
             notes = try decoder.decode([StickyNote].self, from: data)
         } else {
-            guard let object = raw as? [String: Any],
-                  let version = object["schemaVersion"] as? NSNumber,
-                  CFGetTypeID(version) != CFBooleanGetTypeID(), version == NSNumber(value: 2) else {
+            guard case let .scalar(version)? = raw.object?["schemaVersion"], version == "2" else {
                 throw Failure.unsupportedVersion
             }
             let envelope = try decoder.decode(Envelope.self, from: data)
