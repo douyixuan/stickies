@@ -25,7 +25,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 for architecture in arm64 x86_64; do
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
         -target "${architecture}-apple-macosx14.0" Stickies/*.swift -o "$RELEASE_STAGE/Stickies-$architecture"
+    xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
+        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Tools/NoteDataCheck.swift -o "$RELEASE_STAGE/check-$architecture"
 done
+lipo -create "$RELEASE_STAGE/check-arm64" "$RELEASE_STAGE/check-x86_64" -output "$APP/Contents/MacOS/NoteDataCheck"
+codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/NoteDataCheck"
 lipo -create "$RELEASE_STAGE/Stickies-arm64" "$RELEASE_STAGE/Stickies-x86_64" -output "$APP/Contents/MacOS/Stickies"
 export STICKIES_RELEASE_APP="$APP" STICKIES_RELEASE_COMMIT="$RELEASE_COMMIT" STICKIES_RELEASE_VERSION="$RELEASE_VERSION" STICKIES_RELEASE_BUILD="$RELEASE_BUILD"
 python3 - <<'PY'
