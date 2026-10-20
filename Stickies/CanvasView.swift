@@ -26,7 +26,7 @@ final class CanvasWindowController: ObservableObject {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 640),
                               styleMask: [.titled, .closable, .resizable, .miniaturizable],
                               backing: .buffered, defer: false)
-        window.title = "Stickies Canvas"
+        window.title = "iStickies2 — Canvas"
         window.minSize = NSSize(width: 620, height: 400)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: CanvasView())
@@ -71,6 +71,7 @@ struct CanvasView: View {
                     Divider()
                     ArrangementCommands()
                 }
+                Button("Settings…") { CloudSyncController.shared.show() }
                 Button("Search") { searchFocused = true }
                     .keyboardShortcut("f")
             }

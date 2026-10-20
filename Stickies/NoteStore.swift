@@ -160,7 +160,7 @@ final class NoteStore: ObservableObject {
         if notes.isEmpty && canSave {
             createNote()
             if let id = notes.first?.id {
-                updateText(id, "Welcome to Stickies\n\nWrite here. Drag the title bar to move this note, or drag a corner to resize.\n\nUse the menu bar note icon to create notes, change layout, or show hidden notes. Your changes stay on this Mac.")
+                updateText(id, "Welcome to Stickies\n\nWrite here. Drag the title bar to move this note, or drag a corner to resize.\n\nUse the note menu to open Canvas or arrange notes. Use the gear button for Settings and optional folder sync. Notes stay on this Mac until you enable sync.")
             }
         } else {
             for note in notes where note.visible { show(note.id) }
@@ -210,7 +210,7 @@ final class NoteStore: ObservableObject {
         accessory.layoutAttribute = .right
         let header = NSHostingView(rootView: NoteHeaderControls(noteID: id))
         header.frame = NSRect(x: 0, y: 0, width: 60, height: 22)
-        header.toolTip = "Note actions and colors. Drag the empty title bar to move this note."
+        header.toolTip = "Note actions, colors, and settings. Drag the empty title bar to move this note."
         accessory.view = header
         window.addTitlebarAccessoryViewController(accessory)
         let dragAccessory = NSTitlebarAccessoryViewController()

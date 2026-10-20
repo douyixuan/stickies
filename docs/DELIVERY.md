@@ -1,4 +1,4 @@
-# iStickies2 0.2.1 交付候选
+# iStickies2 0.3.0 交付候选
 
 这是 macOS 14+ 的本地优先候选包，包含 Apple Silicon / Intel 两个架构。构建仅使用 ad-hoc 签名，没有 Developer ID 或公证；未更改系统安全设置。签名校验不等于 Gatekeeper 信任，也不等于 GUI 验收。
 
@@ -6,7 +6,7 @@
 
 1. 用随包的 `.zip.sha256` 校验 ZIP：在文件所在目录运行 `shasum -a 256 -c <文件名>.zip.sha256`。
 2. 解压。可把 `iStickies2.app` 复制到自己的 `~/Applications`；升级前退出旧实例并保留旧包。也可从解压目录运行，移动位置不会改变默认数据目录。
-3. 原 QA 的应用控制权限获批后，才执行真实 GUI 验收。普通用户启动时打开应用，通过菜单栏便签图标操作；它是菜单栏应用，不要求出现 Dock 图标。若 macOS 阻止该未公证候选包，保留错误交给打包流程，不删除 quarantine、不关闭 Gatekeeper、不改变签名权限。
+3. 原 QA 的应用控制权限获批后，才执行真实 GUI 验收。普通用户打开应用后进入 Canvas，并可从 Dock 再次打开。便签标题栏的齿轮、便签菜单和 Canvas 的 Settings… 都能打开设置与同步。若 macOS 阻止该未公证候选包，保留错误交给打包流程，不删除 quarantine、不关闭 Gatekeeper、不改变签名权限。
 4. App 内 `Contents/Info.plist` 和 `Contents/Resources/BuildInfo.json` 包含版本、完整 commit、构建时间及架构。ZIP 内 `SHA256SUMS.txt` 可再次检查二进制、元数据和说明。
 
 ## 数据隔离与备份

@@ -23,6 +23,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert all(n.startswith(app) or n in {root + 'START-HERE.txt', root + 'SYNC.md', root + 'SHA256SUMS.txt'} for n in names)
     assert not any('.app/' in n[len(app):] for n in names if n.startswith(app))
     info = plistlib.loads(archive.read(app + 'Contents/Info.plist'))
+    assert info.get('LSUIElement', False) is False, 'The app must expose a Dock entry'
     assert info['CFBundleName'] == info['CFBundleDisplayName'] == 'iStickies2'
     assert info['CFBundleIdentifier'] == 'dev.douyixuan.stickies.delivery'
     assert info['CFBundleIconFile'] == 'iStickies2.icns'

@@ -55,7 +55,7 @@ info = {
     'CFBundleShortVersionString': metadata['version'],
     'CFBundleVersion': metadata['build'],
     'StickiesGitCommit': metadata['commit'],
-    'LSUIElement': True,
+    'LSUIElement': False,
     'LSMinimumSystemVersion': '14.0',
 }
 (app/'Contents/Info.plist').write_bytes(plistlib.dumps(info))
