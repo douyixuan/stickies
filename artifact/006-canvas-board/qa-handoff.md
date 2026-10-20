@@ -10,3 +10,11 @@ Do not bypass the pending Stickies QA app-control permission. This document supp
 6. Original workflow owns simultaneous-instance file-lock and installation/recovery smoke. Headless test evidence here does not replace those GUI checks. CloudKit, signing/container and two-device sync remain separately unimplemented/unverified.
 
 Current build path in this independent workspace: build/Stickies.app. Do not invoke preview.sh here until GUI approval and desktop scheduling are granted by the original workflow.
+
+## Candidate update: 2026-10-20
+
+The build path and cloud implementation statement above describe the earlier Canvas candidate.
+The current candidate includes a shared-folder sync implementation. Actual cloud transport and two-device acceptance remain pending.
+Use `bash scripts/test-store.sh` to compile the current GUI harness without starting windows.
+For authorized GUI execution, follow `artifact/012-gui-harness/verification.md`.
+Do not install a candidate during this development stage.

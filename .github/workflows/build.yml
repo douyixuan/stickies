@@ -21,6 +21,10 @@ jobs:
         run: bash scripts/test-sync.sh
       - name: Test CLI with isolated data and shared app storage
         run: bash scripts/test-cli.sh
+      - name: Compile GUI smoke harness without launching
+        run: bash scripts/test-store.sh
+      - name: Test GUI harness storage guard without launching
+        run: python3 Tests/GUIIsolationTests.py
       - name: Test v2 compatibility and read-only installation gate
         run: bash scripts/test-compatibility.sh
       - name: Test Canvas without opening windows
