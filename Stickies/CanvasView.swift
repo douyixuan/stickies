@@ -26,7 +26,7 @@ final class CanvasWindowController: ObservableObject {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 640),
                               styleMask: [.titled, .closable, .resizable, .miniaturizable],
                               backing: .buffered, defer: false)
-        window.title = "iStickies2 — Canvas"
+        window.title = "iStickies2 — Manage Notes"
         window.minSize = NSSize(width: 620, height: 400)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: CanvasView())
@@ -45,7 +45,7 @@ struct CanvasView: View {
     @FocusState private var searchFocused: Bool
 
     private var results: [StickyNote] {
-        store.notes.filter { CanvasQuery.matches($0.text, query: query) }
+        store.activeNotes.filter { CanvasQuery.matches($0.text, query: query) }
     }
 
     var body: some View {
@@ -54,32 +54,44 @@ struct CanvasView: View {
                 Picker("Browse", selection: $showBoard) {
                     Text("List").tag(false)
                     Text("Board").tag(true)
-                }.pickerStyle(.segmented).frame(width: 130)
-                Image(systemName: "magnifyingglass")
-                TextField("Search all notes", text: $query)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($searchFocused)
-                    .accessibilityLabel("Search all notes")
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 150)
+                .accessibilityLabel("View mode")
                 Button {
                     query = ""
                     selection = store.createNote(showWindow: false)
                 } label: {
                     Label("New Note", systemImage: "plus")
                 }
+                Spacer(minLength: 8)
+                Button("Settings…") { CloudSyncController.shared.show() }
+                    .fixedSize()
+            }
+            .padding(.horizontal, 12).padding(.top, 12)
+            HStack {
+                Image(systemName: "magnifyingglass")
+                TextField("Search all notes", text: $query)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($searchFocused)
+                    .accessibilityLabel("Search all notes")
                 Menu("Window Layout") {
                     WindowModeCommands()
                     Divider()
                     ArrangementCommands()
                 }
-                Button("Settings…") { CloudSyncController.shared.show() }
                 Button("Search") { searchFocused = true }
                     .keyboardShortcut("f")
             }
             .padding(12)
+            Text("Manage notes without moving their independent windows.")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.horizontal, 12).padding(.bottom, 8)
+            if let error = store.trashError {
+                Text(error).font(.caption).foregroundStyle(.red).padding(8)
+            }
             Divider()
             HSplitView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("\(results.count) of \(store.notes.count) notes")
+                    Text("\(results.count) of \(store.activeNotes.count) notes")
                         .font(.caption).foregroundStyle(.secondary).padding(12)
                     if results.isEmpty {
                         ContentUnavailableView(query.isEmpty ? "No Notes" : "No Matching Notes",
@@ -109,7 +121,7 @@ struct CanvasView: View {
                     }
                 }
                 .frame(minWidth: 260, idealWidth: showBoard ? 600 : 280, maxWidth: showBoard ? .infinity : 380)
-                if let selection, let note = store.note(selection) {
+                if let selection, !store.isTrashed(selection), let note = store.note(selection) {
                     VStack(spacing: 0) {
                         HStack {
                             Text(CanvasQuery.title(note.text)).font(.headline).lineLimit(1)
@@ -143,6 +155,9 @@ struct CanvasView: View {
         .onChange(of: controller.newNoteRequest) { _, _ in
             query = ""
             selection = store.createNote(showWindow: false)
+        }
+        .onChange(of: store.activeNotes.map(\.id)) { _, ids in
+            if let selection, !ids.contains(selection) { self.selection = nil }
         }
         .onChange(of: query) { _, _ in
             if let selection, !results.contains(where: { $0.id == selection }) { self.selection = nil }

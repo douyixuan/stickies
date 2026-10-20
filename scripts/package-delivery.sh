@@ -27,7 +27,11 @@ for architecture in arm64 x86_64; do
         -target "${architecture}-apple-macosx14.0" Stickies/*.swift -o "$RELEASE_STAGE/Stickies-$architecture"
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
         -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Tools/NoteDataCheck.swift -o "$RELEASE_STAGE/check-$architecture"
+    xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
+        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Stickies/LocalNoteTrash.swift Tools/Istk.swift -o "$RELEASE_STAGE/istk-$architecture"
 done
+lipo -create "$RELEASE_STAGE/istk-arm64" "$RELEASE_STAGE/istk-x86_64" -output "$APP/Contents/MacOS/istk"
+codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/istk"
 lipo -create "$RELEASE_STAGE/check-arm64" "$RELEASE_STAGE/check-x86_64" -output "$APP/Contents/MacOS/NoteDataCheck"
 codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/NoteDataCheck"
 lipo -create "$RELEASE_STAGE/Stickies-arm64" "$RELEASE_STAGE/Stickies-x86_64" -output "$APP/Contents/MacOS/Stickies"
@@ -64,6 +68,7 @@ PY
 cp Assets/iStickies2.icns "$APP/Contents/Resources/iStickies2.icns"
 cp docs/DELIVERY.md "$PACKAGE/START-HERE.txt"
 cp docs/SYNC.md "$PACKAGE/SYNC.md"
+cp docs/CLI.md "$APP/Contents/Resources/CLI.md"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
 plutil -lint "$APP/Contents/Info.plist"

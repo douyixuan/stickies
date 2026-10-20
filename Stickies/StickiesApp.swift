@@ -49,12 +49,15 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        Task { @MainActor in CanvasWindowController.shared.show() }
+        Task { @MainActor in
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            NoteStore.shared.showAll()
+        }
         return true
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
-        Task { @MainActor in NoteStore.shared.restoreWindows(); CloudSyncController.shared.start(); CanvasWindowController.shared.show() }
+        Task { @MainActor in NoteStore.shared.restoreWindows(); CloudSyncController.shared.start() }
     }
 }

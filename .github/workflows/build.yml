@@ -19,6 +19,8 @@ jobs:
         run: bash scripts/build-local.sh
       - name: Test sync durability with simulated transport (no iCloud)
         run: bash scripts/test-sync.sh
+      - name: Test CLI with isolated data and shared app storage
+        run: bash scripts/test-cli.sh
       - name: Test v2 compatibility and read-only installation gate
         run: bash scripts/test-compatibility.sh
       - name: Test Canvas without opening windows
