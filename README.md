@@ -1,6 +1,6 @@
 # iStickies2
 
-Native macOS spatial sticky notes, built with SwiftUI and AppKit. Local-first, with iCloud sync planned.
+Native macOS spatial sticky notes, built with SwiftUI and AppKit. Local-first, with optional folder sync and a CloudKit adapter. Real cloud and two-device acceptance remain pending.
 
 ## Development
 
@@ -12,16 +12,16 @@ xcodegen generate
 open Stickies.xcodeproj
 ```
 
-Requires a Mac with Xcode. Current milestone: independent note windows, drag/resize, local persistence and grid/list arrangement. iCloud sync remains a subsequent milestone; Desktop/Floating modes are implemented with GUI/Spaces acceptance still pending.
+Requires a Mac with Xcode. Independent windows, Canvas, layout recovery, local persistence, local Trash, and a live CLI channel are implemented. GUI/Spaces and real cloud acceptance remain pending.
 
-## Roadmap
+## Implementation and acceptance status
 
 - [x] Repository bootstrap
-- [ ] M1: Native note windows
-- [ ] M2: Grid/list layout
-- [ ] M3: Persistence and crash recovery
-- [ ] M4: Desktop/Spaces compatibility validation
-- [ ] M5: CloudKit sync
+- [x] M1: Native note window implementation (current GUI gestures still require QA)
+- [x] M2: Free/Grid/List/Compact/Restore implementation and isolated tests
+- [x] M3: Local persistence and process-crash recovery tests
+- [ ] M4: Real Desktop/Spaces, Stage Manager, and display attach/detach acceptance
+- [ ] M5: Real CloudKit signing/container and two-device acceptance; adapter and folder-sync code exist
 
 ## Local preview (macOS 14+, Xcode command line tools)
 
@@ -38,15 +38,15 @@ bash scripts/test-layout.sh
 bash scripts/build-local.sh
 ```
 
-The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. This slice adds the Canvas browser/editor. GUI/Spaces validation remains follow-up work; optional CloudKit is not implemented.
+The recovered PRD V0.2 defines Desktop, Floating and Canvas presentation, with free dragging and one-click arrangement. Canvas, per-note Floating overrides, and local Trash are implemented. Current GUI acceptance remains incomplete; CloudKit adapter code is not proof of real CloudKit operation.
 
-On a logged-in Mac, `bash scripts/test-store.sh` additionally checks real AppKit window move callbacks and exact frame/text/color restoration in a second process. It uses a fresh temporary data directory and does not require Accessibility or iCloud permissions. CI runs geometry tests and both build paths; it does not claim to exercise interactive dragging.
+`bash scripts/test-store.sh` compiles the GUI harness without launching it. The separate `--run-gui` route requires the existing QA workflow approval and uses a guarded temporary profile. CI compiles the harness and tests its isolation guard; it does not exercise interactive dragging.
 
-The native **Notes** menu and each note’s **Note actions** menu provide New Note, Show All Notes, Hide, and Grid/List arrangement. The first text line becomes the window title. Closing a window hides its note without deleting text. Hidden notes remain hidden on launch; Show All Notes explicitly reopens them. **All Note Windows** selects Ordinary, Desktop (behind apps) or Floating (keep on top), and persists across launches. Desktop windows request all Spaces; actual Spaces behavior remains pending GUI QA. Long notes scroll in the native text editor.
+The native **Notes** menu and each note’s **Note actions** menu provide New Note, Show All Notes, Hide, and Grid/List arrangement. The first text line becomes the window title. Closing a window hides its note without deleting text. Hidden notes remain hidden on launch; Show All Notes explicitly reopens them. **Default Note Window Mode** selects Ordinary, Desktop (behind apps) or Floating (keep on top), and persists across launches. Single-note overrides take precedence. Desktop windows request all Spaces; actual Spaces behavior remains pending GUI QA. Long notes scroll in the native text editor.
 
-The real UI check confirmed new/edit/long-text/close/reopen and the native Window → Zoom command, then quit/relaunch with both notes and exact stored frames unchanged. CUA corner-drag positioning remains unreliable; repeated title-drag calls sometimes returned success without changing the saved frame. Do not treat this as complete verification of mouse edge resizing or arbitrary mouse dragging.
+Historical prototype UI checks confirmed new/edit/long-text/close/reopen and the native Window → Zoom command, then quit/relaunch with both notes and exact stored frames unchanged. CUA corner-drag positioning remains unreliable; repeated title-drag calls sometimes returned success without changing the saved frame. Do not treat this as complete verification of mouse edge resizing or arbitrary mouse dragging.
 
-The compact header keeps the native title-bar drag area and traffic-light controls. A subtle grip and two existing menus share that row; there is no separate toolbar above the text. The controls use 22pt-high accessories within the native title bar, whose system hit region stays larger. Text remains selectable, including when dragging across the editor. Native Notes menu shortcuts remain available.
+The compact header keeps the native title-bar drag area and traffic-light controls. A subtle grip, an actions menu, and a settings button share that row; there is no separate toolbar above the text. The controls use 22pt-high accessories within the native title bar, whose system hit region stays larger. Text remains selectable, including when dragging across the editor. Native Notes menu shortcuts remain available.
 
 ## Canvas browser and editor
 
@@ -67,9 +67,23 @@ The snapshot and notes file are separate atomic writes, not a transaction. A fai
 
 ## Desktop and Floating
 
-Use **All Note Windows** in the menu bar, Notes menu, note actions or Canvas's Window Layout menu. **Desktop — Behind Apps** places note windows above the desktop background/icons and below ordinary applications, requesting all Spaces. **Floating — Keep on Top** keeps notes above normal windows. **Ordinary Windows** retains conventional window behavior. Canvas always stays an ordinary resizable window for editing every note, even while independent note windows are hidden behind apps.
+Use **Default Note Window Mode** in the menu bar, Notes menu, note actions or Canvas's Window Layout menu. **Desktop — Behind Apps** places note windows above the desktop background/icons and below ordinary applications, requesting all Spaces. **Floating — Keep on Top** keeps notes above normal windows. **Ordinary Windows** retains conventional window behavior. Canvas always stays an ordinary resizable window for editing every note, even while independent note windows are hidden behind apps.
 
-Modes are device-local in `preferences.json`; existing Keep Notes on Top preferences migrate automatically. Failed writes leave the previous mode active. `bash scripts/test-window-mode.sh` checks preferences, restart, constants and failure protection without windows. Actual click-through/occlusion, Spaces, fullscreen and Mission Control behavior are **not yet GUI-verified**.
+Modes and per-note Floating overrides are device-local in `preferences.json`; existing Keep Notes on Top preferences migrate automatically. A note can explicitly stay on top or stay below the global Floating default. Reset it with **Use Global Window Default**. Changing the global default preserves explicit overrides. Failed writes leave the previous mode active. `bash scripts/test-window-mode.sh` checks preferences, restart, constants and failure protection without windows. Actual click-through/occlusion, Spaces, fullscreen, Stage Manager, display attach/detach, and Mission Control behavior are **not yet GUI-verified**.
+
+
+## Single-note actions and local Trash
+
+The note body and title controls have a context menu for color, per-note keep-on-top, and **Move to Trash on This Mac**.
+The title action menu provides the same commands. Closing a window still only hides the note.
+**Restore from Trash on This Mac**, available from the app menus, restores one selected note and opens its window.
+Deletion preserves content, frame, color, local pin, and sync identity. It does not delete cloud records.
+New remote content can still update a trashed note; restore keeps that newer content.
+Unsaved edits must save before deletion. A failed save leaves the note active.
+
+`bash scripts/test-single-note-actions.sh` tests migration, restart, failed writes, unsaved edits, deletion/restore, and local pin isolation without windows.
+The text editor's actual context-menu routing and preservation of native text actions still require GUI QA.
+UI multiselection remains undecided and is not implemented by these single-note commands.
 
 
 ## Canvas Board
@@ -102,3 +116,12 @@ All data commands require an explicit directory. A compatible running app serial
 Otherwise, the CLI requires the exclusive data lock. The CLI never enables sync.
 See [CLI commands, local Trash semantics, and exit codes](docs/CLI.md).
 This development candidate is not installed and does not establish full product acceptance.
+
+
+## Integration evidence
+
+PRs #16, #17, #18, and #19 passed CI at their recorded heads.
+Their combined commit `d4e48f8ebdfee3da4446b23970f7d3d9e447c1af` passed [the full integration CI](https://github.com/douyixuan/stickies/actions/runs/39399721540).
+That evidence predates the single-note interaction slice; consult its branch CI for the new head.
+Local independent reviews are separate from CodeRabbit, which skipped draft reviews.
+No candidate CI result establishes final main acceptance, GUI acceptance, or installation approval.

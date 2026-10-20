@@ -54,11 +54,16 @@ final class NoteStore: ObservableObject {
     private var isLockedByAnotherInstance = false
     @Published private(set) var keepOnTop = false
     @Published private(set) var windowMode: NoteWindowMode = .standard
+    @Published private(set) var floatingOverrides: [String: Bool] = [:]
     @Published private(set) var preferenceError: String?
     private var canSavePreferences = true
     private var preferencesURL: URL { fileURL.deletingLastPathComponent().appendingPathComponent("preferences.json") }
 
-    private struct Preferences: Codable { var keepOnTop: Bool; var windowMode: NoteWindowMode? }
+    private struct Preferences: Codable {
+        var keepOnTop: Bool
+        var windowMode: NoteWindowMode?
+        var floatingOverrides: [String: Bool]?
+    }
 
 
     private let fileURL: URL = {
@@ -91,6 +96,10 @@ final class NoteStore: ObservableObject {
         if FileManager.default.fileExists(atPath: preferencesURL.path) {
             do {
                 let preferences = try JSONDecoder().decode(Preferences.self, from: Data(contentsOf: preferencesURL))
+                guard (preferences.floatingOverrides ?? [:]).keys.allSatisfy({ UUID(uuidString: $0) != nil }) else {
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+                floatingOverrides = preferences.floatingOverrides ?? [:]
                 windowMode = preferences.windowMode ?? (preferences.keepOnTop ? .floating : .standard)
                 keepOnTop = windowMode == .floating
             } catch {
@@ -134,20 +143,66 @@ final class NoteStore: ObservableObject {
         setWindowMode(enabled ? .floating : .standard)
     }
 
+    func effectiveWindowMode(_ id: UUID) -> NoteWindowMode {
+        guard let pinned = floatingOverrides[id.uuidString] else { return windowMode }
+        if pinned { return .floating }
+        return windowMode == .floating ? .standard : windowMode
+    }
+
+    func hasWindowModeOverride(_ id: UUID) -> Bool { floatingOverrides[id.uuidString] != nil }
+
+    func setNoteFloating(_ id: UUID, _ enabled: Bool?) {
+        guard note(id) != nil, !isTrashed(id) else { return }
+        var overrides = floatingOverrides
+        overrides[id.uuidString] = enabled
+        persistWindowPreferences(mode: windowMode, overrides: overrides)
+    }
+
     func setWindowMode(_ mode: NoteWindowMode) {
+        persistWindowPreferences(mode: mode, overrides: floatingOverrides)
+    }
+
+    private func persistWindowPreferences(mode: NoteWindowMode, overrides: [String: Bool]) {
         guard canSave, contentEditingAllowed, canSavePreferences else { return }
         do {
-            try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode))
+            try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode, floatingOverrides: overrides))
                 .write(to: preferencesURL, options: .atomic)
             windowMode = mode
             keepOnTop = mode == .floating
-            for window in windows.values {
-                window.level = mode.level
-                window.collectionBehavior = mode.collectionBehavior
+            floatingOverrides = overrides
+            for (id, window) in windows {
+                let effective = effectiveWindowMode(id)
+                window.level = effective.level
+                window.collectionBehavior = effective.collectionBehavior
             }
             preferenceError = nil
         } catch {
             preferenceError = "Window mode could not be saved; the previous mode is unchanged: \(error.localizedDescription)"
+        }
+    }
+
+    @discardableResult
+    func moveToTrash(_ id: UUID) -> Bool { changeTrash(id, restoring: false, showWindow: false) }
+
+    @discardableResult
+    func restoreFromTrash(_ id: UUID, showWindow: Bool = true) -> Bool {
+        changeTrash(id, restoring: true, showWindow: showWindow)
+    }
+
+    private func changeTrash(_ id: UUID, restoring: Bool, showWindow: Bool) -> Bool {
+        guard flushPendingChanges() else { return false }
+        do {
+            _ = try executeCommand(.init(id: UUID(), command: restoring ? "restore" : "delete", ids: [id]))
+            trashError = nil
+            if restoring, showWindow { show(id) }
+            return true
+        } catch {
+            if case SerializedNoteCommands.Failure.ledgerFull = error {
+                trashError = "The command history is full. No Trash change was made. Keep the history for safe retries."
+            } else {
+                trashError = "Trash could not be updated. Your note is preserved. Check storage access and recovery status."
+            }
+            return false
         }
     }
 
@@ -256,8 +311,8 @@ final class NoteStore: ObservableObject {
         dragHint.toolTip = "Drag this title bar to move the note. Select text below to edit."
         dragAccessory.view = dragHint
         window.addTitlebarAccessoryViewController(dragAccessory)
-        window.level = windowMode.level
-        window.collectionBehavior = windowMode.collectionBehavior
+        window.level = effectiveWindowMode(id).level
+        window.collectionBehavior = effectiveWindowMode(id).collectionBehavior
         window.minSize = NSSize(width: 180, height: 120)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: NoteView(noteID: id))

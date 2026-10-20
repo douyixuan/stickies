@@ -27,7 +27,7 @@
 
 ## 验收边界与操作
 
-Command-N 新建；Shift-Command-0 打开 Canvas；Canvas 中 Command-F 搜索。Command-Option-0/1/2/3 是窗口 Free/Grid/List/Compact，Command-Option-R 恢复上次窗口排列。Board 自己的 Arrange Board 只改卡片位置。关闭便签只隐藏；Show All Notes 恢复。双击标题/菜单折叠展开。All Note Windows 切换 Ordinary/Desktop/Floating；Canvas 始终普通窗口。
+Command-N 新建；Shift-Command-0 打开 Canvas；Canvas 中 Command-F 搜索。Command-Option-0/1/2/3 是窗口 Free/Grid/List/Compact，Command-Option-R 恢复上次窗口排列。Board 自己的 Arrange Board 只改卡片位置。关闭便签只隐藏；Show All Notes 恢复。双击标题/菜单折叠展开。Default Note Window Mode 切换默认 Ordinary/Desktop/Floating，单张置顶覆盖可独立设置或重置；Canvas 始终普通窗口。
 
 源码/隔离测试已验证数据路径、写失败重试、并发拒写、强制退出后锁释放、布局和内容分离。实际快捷键、拖动/折叠/点击、Desktop 遮挡/Spaces、安装首启与退出确认面板仍需原 QA 执行。CloudKit 适配器受签名/container gate 保护；默认包提供用户选择的 iCloud Drive 文件夹同步。本包不代表真实同步验收通过。
 
