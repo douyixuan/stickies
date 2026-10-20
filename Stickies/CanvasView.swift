@@ -26,7 +26,7 @@ final class CanvasWindowController: ObservableObject {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 640),
                               styleMask: [.titled, .closable, .resizable, .miniaturizable],
                               backing: .buffered, defer: false)
-        window.title = "iStickies2 — Canvas"
+        window.title = "iStickies2 — Manage Notes"
         window.minSize = NSSize(width: 620, height: 400)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: CanvasView())
@@ -54,28 +54,37 @@ struct CanvasView: View {
                 Picker("Browse", selection: $showBoard) {
                     Text("List").tag(false)
                     Text("Board").tag(true)
-                }.pickerStyle(.segmented).frame(width: 130)
-                Image(systemName: "magnifyingglass")
-                TextField("Search all notes", text: $query)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($searchFocused)
-                    .accessibilityLabel("Search all notes")
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 150)
+                .accessibilityLabel("View mode")
                 Button {
                     query = ""
                     selection = store.createNote(showWindow: false)
                 } label: {
                     Label("New Note", systemImage: "plus")
                 }
+                Spacer(minLength: 8)
+                Button("Settings…") { CloudSyncController.shared.show() }
+                    .fixedSize()
+            }
+            .padding(.horizontal, 12).padding(.top, 12)
+            HStack {
+                Image(systemName: "magnifyingglass")
+                TextField("Search all notes", text: $query)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($searchFocused)
+                    .accessibilityLabel("Search all notes")
                 Menu("Window Layout") {
                     WindowModeCommands()
                     Divider()
                     ArrangementCommands()
                 }
-                Button("Settings…") { CloudSyncController.shared.show() }
                 Button("Search") { searchFocused = true }
                     .keyboardShortcut("f")
             }
             .padding(12)
+            Text("Manage notes without moving their independent windows.")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.horizontal, 12).padding(.bottom, 8)
             Divider()
             HSplitView {
                 VStack(alignment: .leading, spacing: 0) {
