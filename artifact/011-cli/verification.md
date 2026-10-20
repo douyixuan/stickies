@@ -13,3 +13,10 @@
 明确限制：App运行时CLI不能并用，包括读取；只允许正常关闭App后操作。该切片不宣称满足日常GUI/CLI并用需求。
 UI多选作用范围仍待回答。真实GUI、完整产品验收和双机云传输未完成。当前安装保持0.3.58。
 本地候选打包及PR CI结果在后续实际完成后记录，不预先记成功。
+
+## Review P2 修复
+
+父流程独立 review 发现文件读取错误被归入解码错误。现已分离读取与解码：读取失败为 io/74，损坏内容仍为 invalid_data/65。
+13 项 CLI 隔离测试通过。新增 notes.json 与 trash.json 不可读常规文件测试覆盖 list/edit/delete，恢复权限后文件哈希不变。
+该修复独立静态 review 通过。新 head CI 待实际结果，旧 head 通过不替代新 head 验证。
+并用后续设计见 coexistence-plan.md；未实现，现有 App 运行时拒绝仍是产品缺口。

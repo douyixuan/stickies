@@ -181,6 +181,22 @@ class CLIIntegration(unittest.TestCase):
         out, err = p.communicate()
         self.assertEqual(p.returncode, 0, err)
         self.assertEqual(json.loads(out)['data']['text'], 'first\nsecond 工作')
+    def test_unreadable_regular_files_report_io_without_changes(self):
+        first = self.add()
+        self.call('delete', first)
+        self.call('restore', first)
+        before = self.hashes()
+        for name in ['notes.json', 'trash.json']:
+            with self.subTest(file=name):
+                file = self.folder / name
+                permissions = file.stat().st_mode & 0o777
+                file.chmod(0)
+                try:
+                    for args in [('list',), ('edit', first, '--text', 'must not save'), ('delete', first)]:
+                        self.assertEqual(self.call(*args, code=74)['code'], 'io')
+                finally:
+                    file.chmod(permissions)
+                self.assertEqual(self.hashes(), before)
 
 if __name__ == '__main__':
     unittest.main()

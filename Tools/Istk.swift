@@ -137,11 +137,14 @@ struct Istk {
         let file = directory.appendingPathComponent("notes.json")
         let trashFile = directory.appendingPathComponent("trash.json")
         try rejectLink(file); try rejectLink(trashFile)
+        // Read failures retain the I/O exit code. Only decoded bytes can be invalid data.
+        let noteData = FileManager.default.fileExists(atPath: file.path) ? try Data(contentsOf: file) : nil
+        let trashData = FileManager.default.fileExists(atPath: trashFile.path) ? try Data(contentsOf: trashFile) : nil
         var notes: [StickyNote]
         var trash: LocalNoteTrash
         do {
-            notes = FileManager.default.fileExists(atPath: file.path) ? try CompatibleNoteFile.decode(Data(contentsOf: file)) : []
-            trash = try LocalNoteTrash.load(from: trashFile)
+            notes = try noteData.map(CompatibleNoteFile.decode) ?? []
+            trash = try trashData.map(LocalNoteTrash.decode) ?? LocalNoteTrash()
         } catch { throw Failure("invalid_data", "Cannot decode notes or Trash. Original files are unchanged.", 65) }
         let candidates = notes.filter { trash.ids.contains($0.id) == request.trash }
         switch request.command {
