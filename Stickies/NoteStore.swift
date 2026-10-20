@@ -19,7 +19,7 @@ final class NoteStore: ObservableObject {
 
     @discardableResult
     private func persistLayout(_ state: NoteLayoutState) -> Bool {
-        guard canSave, canSaveLayout else { return false }
+        guard canSave, contentEditingAllowed, canSaveLayout else { return false }
         do {
             try state.validate()
             try JSONEncoder().encode(state).write(to: layoutURL, options: .atomic)
@@ -43,7 +43,10 @@ final class NoteStore: ObservableObject {
     @Published private(set) var persistenceError: String?
     @Published private(set) var hasUnsavedChanges = false
     private var canSave = true
-    var localStateWritable: Bool { canSave }
+    @Published private(set) var commandRecoveryRequired = false
+    private var commandInProgress = false
+    var contentEditingAllowed: Bool { !commandRecoveryRequired && !commandInProgress }
+    var localStateWritable: Bool { canSave && contentEditingAllowed }
     var localDataDirectory: URL { fileURL.deletingLastPathComponent() }
     private var lockFD: Int32 = -1
     private var isLockedByAnotherInstance = false
@@ -73,6 +76,14 @@ final class NoteStore: ObservableObject {
             canSave = false
             isLockedByAnotherInstance = true
             persistenceError = "This notes folder is already open or cannot be locked. Close its other Stickies instance before reopening. No notes were changed."
+            return
+        }
+        do {
+            try SerializedNoteCommands.recover(in: localDataDirectory)
+        } catch {
+            canSave = false
+            commandRecoveryRequired = true
+            persistenceError = "A command requires recovery. Storage remains read-only until recovery succeeds."
             return
         }
         if FileManager.default.fileExists(atPath: preferencesURL.path) {
@@ -122,7 +133,7 @@ final class NoteStore: ObservableObject {
     }
 
     func setWindowMode(_ mode: NoteWindowMode) {
-        guard canSave, canSavePreferences else { return }
+        guard canSave, contentEditingAllowed, canSavePreferences else { return }
         do {
             try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode))
                 .write(to: preferencesURL, options: .atomic)
@@ -143,7 +154,8 @@ final class NoteStore: ObservableObject {
     }
 
     @discardableResult
-    func createNote(showWindow: Bool = true) -> UUID {
+    func createNote(showWindow: Bool = true) -> UUID? {
+        guard contentEditingAllowed else { return nil }
         let offset = CGFloat(notes.count % 8) * 28
         let note = StickyNote(frame: CGRect(x: 120 + offset, y: 220 + offset, width: 260, height: 220), visible: showWindow)
         notes.append(note)
@@ -153,6 +165,7 @@ final class NoteStore: ObservableObject {
     }
 
     func updateText(_ id: UUID, _ text: String) {
+        guard contentEditingAllowed else { return }
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].text = text
         windows[id]?.title = windowTitle(for: notes[index])
@@ -160,6 +173,7 @@ final class NoteStore: ObservableObject {
     }
 
     func setColor(_ id: UUID, _ color: Int) {
+        guard contentEditingAllowed else { return }
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].color = color
         windows[id]?.backgroundColor = NotePalette.color(color)
@@ -198,6 +212,7 @@ final class NoteStore: ObservableObject {
     }
 
     func show(_ id: UUID) {
+        guard contentEditingAllowed else { return }
         guard !isTrashed(id) else { return }
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].visible = true
@@ -254,6 +269,7 @@ final class NoteStore: ObservableObject {
     }
 
     func hide(_ id: UUID) {
+        guard contentEditingAllowed else { return }
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].visible = false
         windows[id]?.orderOut(nil)
@@ -261,6 +277,7 @@ final class NoteStore: ObservableObject {
     }
 
     func moved(_ id: UUID, frame: CGRect) {
+        guard contentEditingAllowed else { return }
         guard !isArranging,
               let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].frame = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
@@ -356,8 +373,36 @@ final class NoteStore: ObservableObject {
     }
 
     var syncValues: [SyncValue] { notes.map { SyncValue(content: NoteContent(id: $0.id, text: $0.text, color: $0.color)) } }
+    /// Synchronous MainActor execution prevents suspension between preparation and publication.
+    /// No transport or external command listener calls this candidate API.
+    func executeCommand(_ request: SerializedNoteCommands.Request,
+                        checkpoint: (SerializedNoteCommands.Stage) throws -> Void = { _ in }) throws -> SerializedNoteCommands.Result {
+        guard canSave, canSaveTrash, contentEditingAllowed else { throw SerializedNoteCommands.Failure.recoveryRequired }
+        commandInProgress = true
+        defer { commandInProgress = false }
+        if request.command != "list", hasUnsavedChanges { throw SerializedNoteCommands.Failure.recoveryRequired }
+        do {
+            let (result, updated, updatedTrash) = try SerializedNoteCommands.execute(
+                request, notes: notes, trash: trash, in: localDataDirectory, checkpoint: checkpoint)
+            notes = updated
+            trash = updatedTrash
+            for note in notes {
+                windows[note.id]?.title = windowTitle(for: note)
+                windows[note.id]?.backgroundColor = NotePalette.color(note.color)
+                if trash.ids.contains(note.id) { windows[note.id]?.orderOut(nil) }
+            }
+            return result
+        } catch {
+            if FileManager.default.fileExists(atPath: localDataDirectory.appendingPathComponent(SerializedNoteCommands.journalName).path) {
+                canSave = false
+                commandRecoveryRequired = true
+                persistenceError = "The command outcome requires recovery. Restart normally before further changes."
+            }
+            throw error
+        }
+    }
     var syncStorageOwned: Bool { canSave }
-    var syncWritable: Bool { canSave && !hasUnsavedChanges }
+    var syncWritable: Bool { canSave && contentEditingAllowed && !hasUnsavedChanges }
     func applySync(_ value: SyncValue) throws {
         guard syncWritable else { throw SyncCoordinator.Failure.blocked("Local notes have unsaved changes or are read-only.") }
         var updated = notes

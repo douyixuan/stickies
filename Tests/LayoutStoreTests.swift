@@ -47,7 +47,7 @@ struct LayoutStoreTests {
             }
             // Later edits and note creation must survive Restore.
             store.updateText(first, "Edited after arrangement")
-            let id = store.createNote(showWindow: false)
+            let id = store.createNote(showWindow: false)!
             store.updateText(id, "New hidden note")
             store.moved(first, frame: CGRect(x: -500, y: 500, width: 260, height: 32))
             precondition(store.note(first)!.frame.height == 220)

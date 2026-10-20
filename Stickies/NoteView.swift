@@ -10,6 +10,7 @@ struct NoteView: View {
                 get: { store.note(noteID)?.text ?? "" },
                 set: { store.updateText(noteID, $0) }
             ))
+            .disabled(!store.contentEditingAllowed)
             .font(.system(size: 15))
             .foregroundStyle(.black)
             .scrollContentBackground(.hidden)

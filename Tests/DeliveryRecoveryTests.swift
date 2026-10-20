@@ -46,7 +46,7 @@ struct DeliveryRecoveryTests {
             precondition(!store.localStateWritable && store.persistenceError != nil)
             let names = ["notes.json", "layout.json", "canvas-layout.json", "preferences.json"]
             let before = try names.map { try Data(contentsOf: root.appendingPathComponent($0)) }
-            let newID = store.createNote(showWindow: false)
+            let newID = store.createNote(showWindow: false)!
             store.updateText(newID, "must not reach disk")
             store.setWindowMode(.floating)
             store.toggleCollapse(newID, screens: [bounds])
@@ -69,7 +69,7 @@ struct DeliveryRecoveryTests {
         } else if phase == "corrupt" || phase == "future" {
             let before = try Data(contentsOf: file)
             precondition(!store.localStateWritable && store.persistenceError != nil)
-            let newID = store.createNote(showWindow: false)
+            let newID = store.createNote(showWindow: false)!
             store.updateText(newID, "not saved")
             store.setWindowMode(.desktop)
             CanvasBoardStore(notes: store).ensureEntries([newID])
