@@ -8,7 +8,11 @@ struct LocalNoteTrash: Codable {
 
     static func load(from url: URL) throws -> Self {
         guard FileManager.default.fileExists(atPath: url.path) else { return Self() }
-        let value = try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
+        return try decode(Data(contentsOf: url))
+    }
+
+    static func decode(_ data: Data) throws -> Self {
+        let value = try JSONDecoder().decode(Self.self, from: data)
         guard value.version == 1, value.lastBatch.isSubset(of: value.ids) else {
             throw CocoaError(.fileReadCorruptFile)
         }
