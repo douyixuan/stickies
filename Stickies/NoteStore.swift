@@ -22,6 +22,7 @@ final class NoteStore: ObservableObject {
         guard canSave, contentEditingAllowed, canSaveLayout else { return false }
         do {
             try state.validate()
+            try SegmentedCommandLedger.validate(SerializedNoteCommands.read(fileURL), in: localDataDirectory)
             try JSONEncoder().encode(state).write(to: layoutURL, options: .atomic)
             layoutState = state
             layoutError = nil
@@ -165,6 +166,7 @@ final class NoteStore: ObservableObject {
     private func persistWindowPreferences(mode: NoteWindowMode, overrides: [String: Bool]) {
         guard canSave, contentEditingAllowed, canSavePreferences else { return }
         do {
+            try SegmentedCommandLedger.validate(SerializedNoteCommands.read(fileURL), in: localDataDirectory)
             try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode, floatingOverrides: overrides))
                 .write(to: preferencesURL, options: .atomic)
             windowMode = mode

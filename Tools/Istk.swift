@@ -21,7 +21,7 @@ struct Istk {
         var color: Int?
         var trash = false
     }
-    static let commands = ["help", "version", "list", "get", "search", "add", "edit", "delete", "restore", "result"]
+    static let commands = ["help", "version", "list", "get", "search", "add", "edit", "delete", "restore", "result", "migrate-ledger"]
     static func emit(_ object: [String: Any], error: Bool = false) {
         let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .fragmentsAllowed])) ?? Data("{}".utf8)
         let handle = error ? FileHandle.standardError : FileHandle.standardOutput
@@ -68,7 +68,7 @@ struct Istk {
         guard !request.trash || ["list", "get", "search"].contains(request.command) else { throw Failure("usage", "--trash requires list, get, or search.") }
         let count = request.values.count
         switch request.command {
-        case "help", "version", "list", "add": guard count == 0 else { throw Failure("usage", "Unexpected positional argument.") }
+        case "help", "version", "list", "add", "migrate-ledger": guard count == 0 else { throw Failure("usage", "Unexpected positional argument.") }
         case "get", "search", "edit", "result": guard count == 1 else { throw Failure("usage", "This command requires one ID or search query.") }
         case "delete", "restore": guard count > 0 else { throw Failure("usage", "Provide one or more full note IDs.") }
         default: break
@@ -146,12 +146,18 @@ struct Istk {
             includeTrash: request.trash ? true : nil, visibleOnCreate: request.command == "add" ? true : nil)
         if flock(fd, LOCK_EX | LOCK_NB) != 0 {
             guard errno == EWOULDBLOCK || errno == EAGAIN else { throw Failure("io", "Cannot acquire the data lock.", 74) }
+            guard request.command != "migrate-ledger" else { throw Failure("locked", "Ledger migration requires closing the app normally.", 75) }
             return try liveRequest(coreRequest, request: request, directory: directory)
         }
         do {
             try SerializedNoteCommands.recover(in: directory)
         } catch is SerializedNoteCommands.Failure {
             throw Failure("invalid_data", "Command recovery data is invalid or conflicts with storage. No command was executed.", 65)
+        }
+        if request.command == "migrate-ledger" {
+            do { try SegmentedCommandLedger.migrate(in: directory) }
+            catch let failure as SerializedNoteCommands.Failure { throw map(failure) }
+            return ["schemaVersion": 3, "migration": "complete", "legacyClients": "unsupported"] as [String: Any]
         }
         let file = directory.appendingPathComponent("notes.json")
         let trashFile = directory.appendingPathComponent("trash.json")

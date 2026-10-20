@@ -34,6 +34,9 @@ enum SerializedNoteCommands {
         var previousNotes: String?
         var previousTrash: String?
         var previousLedger: String?
+        var profile: UUID?
+        var generation: UInt64?
+        var previousManifest: SegmentedCommandLedger.Manifest?
     }
     enum Failure: Error { case invalidRequest, notFound, conflictingRequestID, ledgerFull, unsafeFile, invalidState, recoveryRequired }
     enum Stage: String { case prepared, notesWritten, trashWritten, ledgerWritten, completed }
@@ -60,10 +63,18 @@ enum SerializedNoteCommands {
         return try Data(contentsOf: url)
     }
     static func ledger(in directory: URL) throws -> Ledger {
+        if let manifest = try SegmentedCommandLedger.manifest(read(directory.appendingPathComponent("notes.json"))) {
+            return Ledger(records: try SegmentedCommandLedger.records(manifest, in: directory))
+        }
         guard let data = try read(directory.appendingPathComponent(ledgerName)) else { return Ledger() }
         return try decodeLedger(data)
     }
-    private static func decodeLedger(_ data: Data) throws -> Ledger {
+    static func decodeLedger(_ data: Data) throws -> Ledger {
+        do { return try decodeLegacyLedger(data) }
+        catch { throw Failure.invalidState }
+    }
+    private static func decodeLegacyLedger(_ data: Data) throws -> Ledger {
+        _ = try LosslessJSON.parse(data)
         let value = try JSONDecoder().decode(Ledger.self, from: data)
         guard value.version == 1, value.records.count <= maximumRecords,
               value.records.allSatisfy({ $0.key == $0.value.result.requestID.uuidString && $0.value.fingerprint.count == 64 }) else {
@@ -74,20 +85,44 @@ enum SerializedNoteCommands {
     /// Replay only under the exclusive lock, before loading mutable application state.
     static func recover(in directory: URL, checkpoint: (Stage) throws -> Void = { _ in }) throws {
         let url = directory.appendingPathComponent(journalName)
-        guard let data = try read(url) else { return }
+        guard let data = try read(url) else {
+            try SegmentedCommandLedger.validate(read(directory.appendingPathComponent("notes.json")), in: directory)
+            return
+        }
         let journal: Journal
         do {
+            _ = try LosslessJSON.parse(data)
             journal = try JSONDecoder().decode(Journal.self, from: data)
-            guard journal.version == 1 else { throw Failure.invalidState }
+            guard [1, 2].contains(journal.version) else { throw Failure.invalidState }
             _ = try CompatibleNoteFile.decode(journal.notes)
             _ = try LocalNoteTrash.decode(journal.trash)
-            _ = try decodeLedger(journal.ledger)
         } catch { throw Failure.invalidState }
+        let current = try read(directory.appendingPathComponent("notes.json"))
+        let before = try SegmentedCommandLedger.manifest(current)
+        let after = try SegmentedCommandLedger.manifest(journal.notes)
+        if journal.version == 1 {
+            guard before == nil, after == nil else { throw Failure.invalidState }
+            _ = try decodeLedger(journal.ledger)
+        } else {
+            guard let before, let after, let prior = journal.previousManifest, let generation = journal.generation,
+                  generation < UInt64.max, journal.profile == before.profile,
+                  after.profile == before.profile, prior.profile == before.profile, prior.generation == generation,
+                  after.generation == generation + 1,
+                  (before == prior || current == journal.notes),
+                  journal.ledger.isEmpty, journal.previousLedger == nil else { throw Failure.invalidState }
+            let previousRecords = try SegmentedCommandLedger.records(prior, in: directory)
+            let nextRecords = try SegmentedCommandLedger.records(after, in: directory)
+            guard nextRecords.count == previousRecords.count + 1 else { throw Failure.invalidState }
+            for (id, record) in previousRecords {
+                guard let next = nextRecords[id], try encoded(record) == encoded(next) else { throw Failure.invalidState }
+            }
+        }
         for (name, previous, after) in [
             ("notes.json", journal.previousNotes, journal.notes),
             ("trash.json", journal.previousTrash, journal.trash),
             (ledgerName, journal.previousLedger, journal.ledger)
         ] {
+            if journal.version == 2 && name == ledgerName { continue }
             let current = try read(directory.appendingPathComponent(name))
             guard current.map(digest) == previous || current == after else { throw Failure.invalidState }
         }
@@ -95,7 +130,7 @@ enum SerializedNoteCommands {
         try checkpoint(.notesWritten)
         try journal.trash.write(to: directory.appendingPathComponent("trash.json"), options: .atomic)
         try checkpoint(.trashWritten)
-        try journal.ledger.write(to: directory.appendingPathComponent(ledgerName), options: .atomic)
+        if journal.version == 1 { try journal.ledger.write(to: directory.appendingPathComponent(ledgerName), options: .atomic) }
         try checkpoint(.ledgerWritten)
         try FileManager.default.removeItem(at: url)
         // Commit already completed. An observation failure cannot undo its result.
@@ -140,7 +175,9 @@ enum SerializedNoteCommands {
             guard existing.fingerprint == fingerprint else { throw Failure.conflictingRequestID }
             return (existing.result, notes, trash)
         }
-        guard ledger.records.count < maximumRecords else { throw Failure.ledgerFull }
+        let original = try read(directory.appendingPathComponent("notes.json"))
+        let segmented = try SegmentedCommandLedger.manifest(original)
+        guard segmented != nil || ledger.records.count < maximumRecords else { throw Failure.ledgerFull }
         var updated = notes
         var updatedTrash = trash
         var affected: [StickyNote]
@@ -167,18 +204,22 @@ enum SerializedNoteCommands {
         }
         let result = Result(requestID: request.id, notes: affected)
         ledger.records[request.id.uuidString] = Record(fingerprint: fingerprint, result: result)
-        let original = try read(directory.appendingPathComponent("notes.json"))
         let originalTrash = try read(directory.appendingPathComponent("trash.json"))
         let originalLedger = try read(directory.appendingPathComponent(ledgerName))
-        let noteData: Data
+        var noteData: Data
         if let original, request.command == "delete" || request.command == "restore" {
             noteData = original
         } else {
             noteData = try CompatibleNoteFile.encode(updated, preserving: original)
         }
-        let journal = Journal(notes: noteData, trash: try encoded(updatedTrash), ledger: try encoded(ledger),
+        if let segmented {
+            let next = try SegmentedCommandLedger.append(ledger.records[request.id.uuidString]!, to: segmented, in: directory)
+            noteData = try SegmentedCommandLedger.replacing(noteData, manifest: next)
+        }
+        let journal = Journal(version: segmented == nil ? 1 : 2, notes: noteData, trash: try encoded(updatedTrash), ledger: segmented == nil ? try encoded(ledger) : Data(),
                               previousNotes: original.map(digest), previousTrash: originalTrash.map(digest),
-                              previousLedger: originalLedger.map(digest))
+                              previousLedger: segmented == nil ? originalLedger.map(digest) : nil,
+                              profile: segmented?.profile, generation: segmented?.generation, previousManifest: segmented)
         let data = try encoded(journal)
         guard data.count <= 64 * 1024 * 1024 else { throw Failure.ledgerFull }
         try data.write(to: directory.appendingPathComponent(journalName), options: .atomic)

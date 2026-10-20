@@ -17,6 +17,12 @@ enum CompatibleNoteFile {
 
     static func decode(_ data: Data) throws -> [StickyNote] {
         let raw = try LosslessJSON.parse(data)
+        if case .scalar("3")? = raw.object?["schemaVersion"] {
+            guard let document = raw.object?["document"] else { throw Failure.invalidDocument }
+            if case .scalar("3")? = document.object?["schemaVersion"] { throw Failure.invalidDocument }
+            _ = try SegmentedCommandLedger.manifest(data)
+            return try decode(document.data())
+        }
         let decoder = JSONDecoder()
         let notes: [StickyNote]
         if raw.array != nil {
@@ -46,6 +52,11 @@ enum CompatibleNoteFile {
         guard let original else { return try LosslessJSON.array(fresh).data() }
         _ = try decode(original)
         let raw = try LosslessJSON.parse(original)
+        if case .scalar("3")? = raw.object?["schemaVersion"] {
+            var wrapper = raw.object!
+            wrapper["document"] = try LosslessJSON.parse(encode(notes, preserving: wrapper["document"]!.data()))
+            return try LosslessJSON.object(wrapper).data()
+        }
         func indexed(_ entries: [LosslessJSON]) -> [UUID: [String: LosslessJSON]] {
             Dictionary(uniqueKeysWithValues: entries.map { (UUID(uuidString: $0.object!["id"]!.string!)!, $0.object!) })
         }
@@ -76,6 +87,7 @@ enum CompatibleNoteFile {
     static func save(_ notes: [StickyNote], to url: URL) throws {
         // Re-read under the caller's lock, preserving extensions even after a retry.
         let original = FileManager.default.fileExists(atPath: url.path) ? try Data(contentsOf: url) : nil
+        try SegmentedCommandLedger.validate(original, in: url.deletingLastPathComponent())
         try encode(notes, preserving: original).write(to: url, options: .atomic)
     }
 }

@@ -60,7 +60,19 @@ Read commands do not create ledger records.
 If a response is lost or times out, code 74 with `outcome_unknown` means the mutation might have committed.
 Query the result or retry with the same ID. The CLI does not retry automatically.
 Results survive normal exit and process crashes through the command journal.
-The ledger keeps 4096 mutation results without eviction. A full ledger rejects new mutations with code 75.
+An unmigrated profile keeps 4096 mutation results without eviction. A full ledger rejects new mutations with code 75.
+
+For an explicit offline upgrade, close every app using the selected profile normally, back up the entire folder, and run:
+
+```sh
+istk --data-dir /path/to/profile migrate-ledger
+```
+
+This command upgrades `notes.json` to schema 3 and retains every request fingerprint and original result. Old app and CLI versions cannot read or write this profile. There is no automatic migration or downgrade. The command does not route through a running app; a held lock returns 75.
+
+Migration stages immutable segments and publishes their inventory inside `notes.json` in one atomic replacement. A process interruption before publication leaves the old profile authoritative; interruption after publication leaves the complete new inventory authoritative. Retrying migration is safe. The original `command-results.json` remains untouched, but is no longer authoritative after migration. Never replace schema 3 notes with that stale ledger or delete segment files.
+
+Schema 3 removes the fixed 4096-record limit. Segments contain at most 128 results and 16 MiB. Each mutation retains all prior results and publishes a new inventory through a journal bound to the profile and previous generation. Missing, altered, or duplicate segment records stop writes. Individual oversized results, disk exhaustion, and the complete encoded journal limit of 64 MiB can still stop mutations. Validation currently reads all referenced history into memory: time and memory grow with history. Superseded immutable files are retained; no compaction or eviction is implemented. Recovery is tested for process crashes, not sudden power loss.
 Back up the whole profile, including command journal and ledger files.
 These guarantees do not establish power-loss durability.
 

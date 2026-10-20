@@ -114,6 +114,7 @@ The icon source is `Assets/iStickies2.png`; `scripts/build-icon.sh` regenerates 
 The CLI supports JSON help/version, list/get/search, add/edit, and recoverable local delete/restore.
 All data commands require an explicit directory. A compatible running app serializes requests through its live store.
 Otherwise, the CLI requires the exclusive data lock. The CLI never enables sync.
+Explicit offline `migrate-ledger` upgrades a selected profile to schema 3, retaining request history beyond 4096 results. Older clients then reject that profile; migration is never automatic.
 See [CLI commands, local Trash semantics, and exit codes](docs/CLI.md).
 This development candidate is not installed and does not establish full product acceptance.
 

@@ -6,6 +6,7 @@ import Foundation
         guard CommandLine.arguments.count == 2 else { exit(64) }
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
+            try SegmentedCommandLedger.validate(data, in: URL(fileURLWithPath: CommandLine.arguments[1]).deletingLastPathComponent())
             let notes = try CompatibleNoteFile.decode(data)
             let saved = try CompatibleNoteFile.encode(notes, preserving: data)
             let restored = try CompatibleNoteFile.decode(saved)
