@@ -62,8 +62,18 @@ enum SerializedNoteCommands {
         guard info.st_size <= 64 * 1024 * 1024 else { throw Failure.invalidState }
         return try Data(contentsOf: url)
     }
+    static func checkedNotes(in directory: URL) throws -> Data? {
+        let notes = try read(directory.appendingPathComponent("notes.json"))
+        if notes == nil {
+            let names = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            guard !names.contains(ledgerName), !names.contains(where: { $0.hasPrefix("command-segment-") }) else {
+                throw Failure.invalidState
+            }
+        }
+        return notes
+    }
     static func ledger(in directory: URL) throws -> Ledger {
-        if let manifest = try SegmentedCommandLedger.manifest(read(directory.appendingPathComponent("notes.json"))) {
+        if let manifest = try SegmentedCommandLedger.manifest(checkedNotes(in: directory)) {
             return Ledger(records: try SegmentedCommandLedger.records(manifest, in: directory))
         }
         guard let data = try read(directory.appendingPathComponent(ledgerName)) else { return Ledger() }
@@ -86,7 +96,7 @@ enum SerializedNoteCommands {
     static func recover(in directory: URL, checkpoint: (Stage) throws -> Void = { _ in }) throws {
         let url = directory.appendingPathComponent(journalName)
         guard let data = try read(url) else {
-            try SegmentedCommandLedger.validate(read(directory.appendingPathComponent("notes.json")), in: directory)
+            try SegmentedCommandLedger.validate(checkedNotes(in: directory), in: directory)
             return
         }
         let journal: Journal

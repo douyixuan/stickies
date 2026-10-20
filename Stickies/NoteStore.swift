@@ -22,7 +22,7 @@ final class NoteStore: ObservableObject {
         guard canSave, contentEditingAllowed, canSaveLayout else { return false }
         do {
             try state.validate()
-            try SegmentedCommandLedger.validate(SerializedNoteCommands.read(fileURL), in: localDataDirectory)
+            try validateSegmentedProfile()
             try JSONEncoder().encode(state).write(to: layoutURL, options: .atomic)
             layoutState = state
             layoutError = nil
@@ -44,6 +44,7 @@ final class NoteStore: ObservableObject {
     @Published private(set) var persistenceError: String?
     @Published private(set) var hasUnsavedChanges = false
     private var canSave = true
+    private var segmentedProfile: UUID?
     @Published private(set) var commandRecoveryRequired = false
     private var commandInProgress = false
     private var commandServer: LocalCommandServer?
@@ -129,11 +130,22 @@ final class NoteStore: ObservableObject {
         }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
-            notes = try CompatibleNoteFile.decode(Data(contentsOf: fileURL))
+            let data = try Data(contentsOf: fileURL)
+            notes = try CompatibleNoteFile.decode(data)
+            segmentedProfile = try SegmentedCommandLedger.manifest(data)?.profile
         } catch {
             canSave = false
             persistenceError = "Could not read notes. Original file preserved at \(fileURL.path). \(error.localizedDescription)"
         }
+    }
+
+    private func validateSegmentedProfile() throws {
+        guard let segmentedProfile else { return }
+        let data = try SerializedNoteCommands.read(fileURL)
+        guard let manifest = try SegmentedCommandLedger.manifest(data), manifest.profile == segmentedProfile else {
+            throw SerializedNoteCommands.Failure.invalidState
+        }
+        _ = try SegmentedCommandLedger.records(manifest, in: localDataDirectory)
     }
 
     deinit {
@@ -166,7 +178,7 @@ final class NoteStore: ObservableObject {
     private func persistWindowPreferences(mode: NoteWindowMode, overrides: [String: Bool]) {
         guard canSave, contentEditingAllowed, canSavePreferences else { return }
         do {
-            try SegmentedCommandLedger.validate(SerializedNoteCommands.read(fileURL), in: localDataDirectory)
+            try validateSegmentedProfile()
             try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode, floatingOverrides: overrides))
                 .write(to: preferencesURL, options: .atomic)
             windowMode = mode
@@ -462,6 +474,7 @@ final class NoteStore: ObservableObject {
     /// The local channel and offline CLI use this command core under exclusive ownership.
     func executeCommand(_ request: SerializedNoteCommands.Request,
                         checkpoint: (SerializedNoteCommands.Stage) throws -> Void = { _ in }) throws -> SerializedNoteCommands.Result {
+        try validateSegmentedProfile()
         guard canSave, canSaveTrash, contentEditingAllowed else { throw SerializedNoteCommands.Failure.recoveryRequired }
         commandInProgress = true
         defer { commandInProgress = false }
@@ -496,6 +509,7 @@ final class NoteStore: ObservableObject {
             updated[index].text = value.content.text; updated[index].color = value.content.color
         } else { updated.append(StickyNote(id: value.id, text: value.content.text, color: value.content.color, visible: false)) }
         // Commit before publishing. Failed remote applies never replace in-memory edits.
+        try validateSegmentedProfile()
         try CompatibleNoteFile.save(updated, to: fileURL)
         notes = updated
         if value.deleted { windows[value.id]?.orderOut(nil) }
@@ -509,6 +523,7 @@ final class NoteStore: ObservableObject {
         hasUnsavedChanges = true
         guard canSave else { return }
         do {
+            try validateSegmentedProfile()
             try CompatibleNoteFile.save(notes, to: fileURL)
             hasUnsavedChanges = false
             if persistenceError != nil { persistenceError = nil }

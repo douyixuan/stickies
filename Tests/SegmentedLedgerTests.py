@@ -241,4 +241,12 @@ class SegmentedLedgerTests(unittest.TestCase):
             before = self.snapshot()
             self.call('list',code=65)
             self.assertEqual(before,self.snapshot())
+    def test_missing_authoritative_notes_never_falls_back(self):
+        self.call('migrate-ledger')
+        self.call('add','--text','after migration')
+        (self.path/'notes.json').unlink()
+        before = self.snapshot()
+        self.call('add','--text','must refuse',code=65)
+        self.call('migrate-ledger',code=65)
+        self.assertEqual(before,self.snapshot())
 if __name__ == '__main__': unittest.main()
