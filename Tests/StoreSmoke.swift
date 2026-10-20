@@ -4,6 +4,23 @@ import Darwin
 @main
 struct StoreSmoke {
     @MainActor static func main() {
+        let environment = ProcessInfo.processInfo.environment
+        guard let path = environment["STICKIES_DATA_DIR"],
+              let token = environment["STICKIES_GUI_SMOKE_TOKEN"],
+              UUID(uuidString: token) != nil else {
+            refuseUnsafeStorage()
+        }
+        let directory = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL
+        let temporary = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().standardizedFileURL
+        guard directory.deletingLastPathComponent() == temporary,
+              directory.lastPathComponent.hasPrefix("stickies-test."),
+              (try? String(contentsOf: directory.appendingPathComponent(".gui-smoke-token"), encoding: .utf8)) == token else {
+            refuseUnsafeStorage()
+        }
+        if CommandLine.arguments.contains("--check-isolation") {
+            print("PASS: isolated temporary storage")
+            return
+        }
         _ = NSApplication.shared
         let store = NoteStore.shared
         if CommandLine.arguments.contains("--hold") {
@@ -56,5 +73,10 @@ struct StoreSmoke {
             precondition(store.persistenceError == nil)
             print("PASS: startup, text/color updates, arrangement, frame persistence, hide/show")
         }
+    }
+
+    private static func refuseUnsafeStorage() -> Never {
+        fputs("GUI smoke requires temporary storage from scripts/test-store.sh. No application started.\n", stderr)
+        exit(64)
     }
 }
