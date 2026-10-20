@@ -20,7 +20,7 @@
 | 设备分离 | 同步正文/颜色，不同步设备 frame、可见性和窗口模式；无意外覆盖新编辑 | 隔离兼容与状态机测试通过；真实双机待验证 |
 | CloudKit 边界 | 如要求 CloudKit，须有签名/container/实际双设备证据；目录模式不要求开发者账号 | 当前交付为目录模式；CloudKit 仅适配器，真实 CloudKit 未验收 |
 | 安装 | 完整范围全部验证后，正常保存退出、验证备份、原位升级，保持唯一应用与原数据目录 | 当前安装仍为 c199a7a/0.3.58；最新用户明确暂停所有中间安装 |
-| 最终审查 | 完整最终差异独立 review；PR CI及最终 main CI通过；未解决阻断为零 | PR16/17/18/19准确head与组合d4e48f8完整CI通过，本机独立复审通过；单张切片需其新head CI。CodeRabbit跳过draft。最终main CI及GUI仍未完成 |
+| 最终审查 | 完整最终差异独立 review；PR CI及最终 main CI通过；未解决阻断为零 | PR16/17/18/19准确head与组合d4e48f8完整CI通过，本机独立复审通过；单张切片见 [PR20当前head检查](https://github.com/douyixuan/stickies/pull/20/checks)，不能沿用旧组合结果。CodeRabbit跳过draft。最终main CI及GUI仍未完成 |
 
 # 真实验收阻点
 

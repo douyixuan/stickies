@@ -122,6 +122,7 @@ This development candidate is not installed and does not establish full product 
 
 PRs #16, #17, #18, and #19 passed CI at their recorded heads.
 Their combined commit `d4e48f8ebdfee3da4446b23970f7d3d9e447c1af` passed [the full integration CI](https://github.com/douyixuan/stickies/actions/runs/39399721540).
-That evidence predates the single-note interaction slice; consult its branch CI for the new head.
+That evidence predates [the single-note interaction slice, PR #20](https://github.com/douyixuan/stickies/pull/20).
+Use [PR #20 head checks](https://github.com/douyixuan/stickies/pull/20/checks) for its current CI status.
 Local independent reviews are separate from CodeRabbit, which skipped draft reviews.
 No candidate CI result establishes final main acceptance, GUI acceptance, or installation approval.
