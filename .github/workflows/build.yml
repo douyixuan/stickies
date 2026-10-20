@@ -33,6 +33,8 @@ jobs:
         run: bash scripts/test-canvas-board.sh
       - name: Test crash, lock and pending-save recovery without windows
         run: bash scripts/test-delivery-recovery.sh
+      - name: Test serialized commands and process-crash recovery without windows
+        run: bash scripts/test-command-core.sh
       - name: Build
         run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath build/.xcode.noindex build
       - name: Verify Xcode icon and identity

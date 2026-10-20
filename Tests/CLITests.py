@@ -197,6 +197,18 @@ class CLIIntegration(unittest.TestCase):
                 finally:
                     file.chmod(permissions)
                 self.assertEqual(self.hashes(), before)
+    def test_recovery_journal_distinguishes_read_and_decode_errors(self):
+        self.add()
+        journal = self.folder / 'command-journal.json'
+        journal.write_text('invalid journal')
+        before = self.hashes()
+        self.assertEqual(self.call('list',code=65)['code'],'invalid_data')
+        journal.chmod(0)
+        try:
+            self.assertEqual(self.call('list',code=74)['code'],'io')
+        finally:
+            journal.chmod(0o600)
+        self.assertEqual(self.hashes(),before)
 
 if __name__ == '__main__':
     unittest.main()

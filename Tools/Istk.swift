@@ -134,6 +134,11 @@ struct Istk {
         guard fd >= 0 else { throw Failure("io", "Cannot open the data lock.", 74) }
         defer { close(fd) }
         guard flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw Failure("locked", "The app or another command owns this data folder. Quit it normally and retry.", 75) }
+        do {
+            try SerializedNoteCommands.recover(in: directory)
+        } catch is SerializedNoteCommands.Failure {
+            throw Failure("invalid_data", "Command recovery data is invalid or conflicts with storage. No command was executed.", 65)
+        }
         let file = directory.appendingPathComponent("notes.json")
         let trashFile = directory.appendingPathComponent("trash.json")
         try rejectLink(file); try rejectLink(trashFile)

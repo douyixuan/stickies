@@ -70,7 +70,7 @@ struct CanvasTests {
         let afterBrowsing = try Data(contentsOf: url)
         precondition(afterBrowsing == original, "Browsing must not write notes")
 
-        let id = store.createNote(showWindow: false)
+        let id = store.createNote(showWindow: false)!
         precondition(store.note(id)?.visible == false)
         precondition(store.note(id)?.text == "")
         store.updateText(id, "Canvas edited\nSecond line")

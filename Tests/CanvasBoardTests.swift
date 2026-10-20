@@ -10,7 +10,7 @@ struct CanvasBoardTests {
         let store = NoteStore.shared
         if phase != "restore" {
             for index in 0..<50 {
-                let id = store.createNote(showWindow: false)
+                let id = store.createNote(showWindow: false)!
                 store.updateText(id, "Board note \(index)")
             }
         }
@@ -44,7 +44,7 @@ struct CanvasBoardTests {
             precondition(board.state.frames.count == 50)
             precondition(board.state.frames.values.allSatisfy { $0.height == 54 })
             // Restore keeps a note created after the arrangement.
-            let id = store.createNote(showWindow: false)
+            let id = store.createNote(showWindow: false)!
             board.ensureEntries(store.notes.map(\.id))
             let newFrame = board.state.frames[id]
             let afterCreation = try Data(contentsOf: notesURL)
