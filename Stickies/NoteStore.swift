@@ -45,6 +45,7 @@ final class NoteStore: ObservableObject {
     private var canSave = true
     @Published private(set) var commandRecoveryRequired = false
     private var commandInProgress = false
+    private var commandServer: LocalCommandServer?
     var contentEditingAllowed: Bool { !commandRecoveryRequired && !commandInProgress }
     var localStateWritable: Bool { canSave && contentEditingAllowed }
     var localDataDirectory: URL { fileURL.deletingLastPathComponent() }
@@ -373,6 +374,24 @@ final class NoteStore: ObservableObject {
     }
 
     var syncValues: [SyncValue] { notes.map { SyncValue(content: NoteContent(id: $0.id, text: $0.text, color: $0.color)) } }
+    func startCommandService(showWindows: Bool = false) throws {
+        guard canSave, lockFD >= 0, !isLockedByAnotherInstance, commandServer == nil else {
+            throw SerializedNoteCommands.Failure.recoveryRequired
+        }
+        commandServer = try LocalCommandServer(directory: localDataDirectory) { [weak self] request in
+            guard let self else { throw SerializedNoteCommands.Failure.recoveryRequired }
+            let replayed = try SerializedNoteCommands.ledger(in: self.localDataDirectory).records[request.id.uuidString] != nil
+            let result = try self.executeCommand(request)
+            if showWindows, !replayed, ["add", "restore"].contains(request.command) {
+                for note in result.notes where self.note(note.id)?.visible == true { self.show(note.id) }
+            }
+            return result
+        }
+    }
+    func stopCommandService() {
+        commandServer?.stop()
+        commandServer = nil
+    }
     /// Synchronous MainActor execution prevents suspension between preparation and publication.
     /// No transport or external command listener calls this candidate API.
     func executeCommand(_ request: SerializedNoteCommands.Request,
@@ -380,7 +399,7 @@ final class NoteStore: ObservableObject {
         guard canSave, canSaveTrash, contentEditingAllowed else { throw SerializedNoteCommands.Failure.recoveryRequired }
         commandInProgress = true
         defer { commandInProgress = false }
-        if request.command != "list", hasUnsavedChanges { throw SerializedNoteCommands.Failure.recoveryRequired }
+        if !["list", "get", "search", "result"].contains(request.command), hasUnsavedChanges { throw SerializedNoteCommands.Failure.recoveryRequired }
         do {
             let (result, updated, updatedTrash) = try SerializedNoteCommands.execute(
                 request, notes: notes, trash: trash, in: localDataDirectory, checkpoint: checkpoint)

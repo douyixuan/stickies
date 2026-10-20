@@ -99,6 +99,7 @@ class CLIIntegration(unittest.TestCase):
     def test_failed_writes_and_invalid_data_do_not_report_success(self):
         first = self.add()
         notes = (self.folder/'notes.json').read_bytes()
+        (self.folder/'trash.json').unlink()
         (self.folder/'trash.json').mkdir()
         self.call('delete', first, code=65)
         self.assertEqual((self.folder/'notes.json').read_bytes(), notes)

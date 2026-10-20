@@ -98,7 +98,7 @@ The icon source is `Assets/iStickies2.png`; `scripts/build-icon.sh` regenerates 
 
 `bash scripts/build-cli.sh` builds `build/bin/istk` without opening the app.
 The CLI supports JSON help/version, list/get/search, add/edit, and recoverable local delete/restore.
-All data commands require an explicit directory and the same exclusive lock as the app.
-The app must close normally first. The CLI never enables sync.
+All data commands require an explicit directory. A compatible running app serializes requests through its live store.
+Otherwise, the CLI requires the exclusive data lock. The CLI never enables sync.
 See [CLI commands, local Trash semantics, and exit codes](docs/CLI.md).
 This development candidate is not installed and does not establish full product acceptance.

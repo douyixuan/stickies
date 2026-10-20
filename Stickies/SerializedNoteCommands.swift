@@ -11,6 +11,8 @@ enum SerializedNoteCommands {
         var ids: [UUID] = []
         var text: String?
         var color: Int?
+        var includeTrash: Bool?
+        var visibleOnCreate: Bool?
     }
     struct Result: Codable {
         var requestID: UUID
@@ -33,7 +35,7 @@ enum SerializedNoteCommands {
         var previousTrash: String?
         var previousLedger: String?
     }
-    enum Failure: Error { case invalidRequest, conflictingRequestID, ledgerFull, unsafeFile, invalidState, recoveryRequired }
+    enum Failure: Error { case invalidRequest, notFound, conflictingRequestID, ledgerFull, unsafeFile, invalidState, recoveryRequired }
     enum Stage: String { case prepared, notesWritten, trashWritten, ledgerWritten, completed }
     static let journalName = "command-journal.json"
     static let ledgerName = "command-results.json"
@@ -102,13 +104,35 @@ enum SerializedNoteCommands {
     static func execute(_ request: Request, notes: [StickyNote], trash: LocalNoteTrash,
                         in directory: URL, checkpoint: (Stage) throws -> Void = { _ in }) throws -> (Result, [StickyNote], LocalNoteTrash) {
         guard try read(directory.appendingPathComponent(journalName)) == nil else { throw Failure.recoveryRequired }
-        if request.command == "list" {
-            guard request.ids.isEmpty, request.text == nil, request.color == nil else { throw Failure.invalidRequest }
-            return (Result(requestID: request.id, notes: notes.filter { !trash.ids.contains($0.id) }), notes, trash)
+        if request.command == "result" {
+            guard request.ids.count == 1, request.text == nil, request.color == nil else { throw Failure.invalidRequest }
+            guard let record = try ledger(in: directory).records[request.ids[0].uuidString] else { throw Failure.notFound }
+            return (record.result, notes, trash)
+        }
+        if ["list", "get", "search"].contains(request.command) {
+            guard request.color == nil, request.visibleOnCreate == nil else { throw Failure.invalidRequest }
+            let candidates = notes.filter { trash.ids.contains($0.id) == (request.includeTrash == true) }
+            var found = candidates
+            switch request.command {
+            case "list":
+                guard request.ids.isEmpty, request.text == nil else { throw Failure.invalidRequest }
+            case "get":
+                guard request.ids.count == 1, request.text == nil else { throw Failure.invalidRequest }
+                found = candidates.filter { $0.id == request.ids[0] }
+                guard !found.isEmpty else { throw Failure.notFound }
+            default:
+                guard request.ids.isEmpty, let text = request.text else { throw Failure.invalidRequest }
+                let terms = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+                found = candidates.filter { note in terms.allSatisfy {
+                    note.text.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+                } }
+            }
+            return (Result(requestID: request.id, notes: found), notes, trash)
         }
         guard ["add", "edit", "delete", "restore"].contains(request.command),
               request.text.map({ $0.utf8.count <= 8 * 1024 * 1024 }) ?? true,
               request.color.map({ (0...3).contains($0) }) ?? true,
+              request.includeTrash != true,
               Set(request.ids).count == request.ids.count else { throw Failure.invalidRequest }
         let fingerprint = digest(try encoded(request))
         var ledger = try ledger(in: directory)
@@ -123,20 +147,20 @@ enum SerializedNoteCommands {
         switch request.command {
         case "add":
             guard request.ids.isEmpty else { throw Failure.invalidRequest }
-            let note = StickyNote(text: request.text ?? "", color: request.color ?? 0, visible: false)
+            let note = StickyNote(text: request.text ?? "", color: request.color ?? 0, visible: request.visibleOnCreate == true)
             updated.append(note)
             affected = [note]
         case "edit":
-            guard request.ids.count == 1, request.text != nil || request.color != nil,
-                  let index = updated.firstIndex(where: { $0.id == request.ids[0] && !trash.ids.contains($0.id) }) else { throw Failure.invalidRequest }
+            guard request.ids.count == 1, request.text != nil || request.color != nil else { throw Failure.invalidRequest }
+            guard let index = updated.firstIndex(where: { $0.id == request.ids[0] && !trash.ids.contains($0.id) }) else { throw Failure.notFound }
             if let text = request.text { updated[index].text = text }
             if let color = request.color { updated[index].color = color }
             affected = [updated[index]]
         default:
             let ids = Set(request.ids)
             let restoring = request.command == "restore"
-            guard !ids.isEmpty, request.text == nil, request.color == nil,
-                  ids.isSubset(of: Set(notes.filter { trash.ids.contains($0.id) == restoring }.map(\.id))) else { throw Failure.invalidRequest }
+            guard !ids.isEmpty, request.text == nil, request.color == nil else { throw Failure.invalidRequest }
+            guard ids.isSubset(of: Set(notes.filter { trash.ids.contains($0.id) == restoring }.map(\.id))) else { throw Failure.notFound }
             if restoring { updatedTrash.ids.subtract(ids); updatedTrash.lastBatch.subtract(ids) }
             else { updatedTrash.ids.formUnion(ids); updatedTrash.lastBatch = ids }
             affected = notes.filter { ids.contains($0.id) }
