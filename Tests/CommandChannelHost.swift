@@ -12,7 +12,18 @@ import Darwin
         guard store.syncStorageOwned else { exit(75) }
         let mode = CommandLine.arguments.dropFirst().first ?? "normal"
         var server: LocalCommandServer?
-        if mode == "normal" {
+        if mode == "lifecycle" {
+            try store.startCommandService()
+            try store.startCommandService() // Repeated startup keeps one storage authority.
+            store.stopCommandService()
+            precondition(!FileManager.default.fileExists(atPath: path + "/istk.sock"))
+            _ = chmod(path, 0o777)
+            do { try store.startCommandService(); preconditionFailure("Unsafe profile accepted") }
+            catch { precondition(store.commandServiceError != nil) }
+            _ = chmod(path, 0o700)
+            try store.startCommandService()
+            precondition(store.commandServiceError == nil)
+        } else if mode == "normal" {
             try store.startCommandService()
         } else {
             server = try LocalCommandServer(directory: store.localDataDirectory) { request in

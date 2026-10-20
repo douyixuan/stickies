@@ -17,6 +17,7 @@ struct StickiesApp: App {
             Divider()
             ArrangementCommands()
             Divider()
+            if let error = store.commandServiceError { Text(error) }
             Button("Quit iStickies2") { NSApplication.shared.terminate(nil) }
         }
         .commands {

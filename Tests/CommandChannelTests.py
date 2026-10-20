@@ -58,6 +58,11 @@ class CommandChannelTests(unittest.TestCase):
         result=json.loads(exact(size));peer.close();return result
     def request(self,identity=None,text='raw'):
         return {'version':1,'request':{'id':identity or str(uuid.uuid4()),'command':'add','ids':[],'text':text}}
+    def test_store_lifecycle_and_visible_failure_state(self):
+        self.start('lifecycle')
+        self.assertEqual(self.cli('add','--text','after restart')['data']['text'],'after restart')
+        self.stop()
+        self.assertFalse((self.folder/'istk.sock').exists())
     def test_live_crud_search_and_restart(self):
         self.start()
         first=self.cli('add','--stdin',stdin='工作 café\nline'.encode())['data']['id']
