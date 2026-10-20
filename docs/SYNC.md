@@ -9,7 +9,7 @@ This mode does not require an Apple developer account.
 A local folder also works, but a cloud drive must transfer files between Macs.
 The app starts with sync off.
 
-1. On the first Mac, open **Sync Folder…**.
+1. On the first Mac, click the gear on a note, or select **Sync Folder…** from its note menu.
 2. Select **Create Sync Folder…**.
 3. Select a parent folder in your cloud drive, such as iCloud Drive.
 4. Select the local notes that you want to sync.

@@ -81,10 +81,12 @@ import CloudKit
     func show() {
         if window == nil {
             let result = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 620), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-            result.title = "Sync Folder — iStickies2"
+            result.title = "Settings — iStickies2"
             result.contentView = NSHostingView(rootView: SyncSettingsHost(controller: self))
             result.isReleasedWhenClosed = false; result.center(); window = result
         }
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        if window?.isMiniaturized == true { window?.deminiaturize(nil) }
         window?.makeKeyAndOrderFront(nil)
     }
 }
@@ -93,6 +95,9 @@ struct SyncSettingsHost: View {
     @ObservedObject var controller: CloudSyncController
     var body: some View {
         VStack(alignment: .leading) {
+            Text("Settings").font(.title.bold())
+            WindowModeCommands()
+            Divider()
             HStack {
                 Button("Create Sync Folder…") { controller.chooseFolder(create: true) }
                 Button("Open Existing Sync Folder…") { controller.chooseFolder(create: false) }

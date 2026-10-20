@@ -10,21 +10,19 @@ struct StickiesApp: App {
         MenuBarExtra("iStickies2", systemImage: "note.text") {
             Button("New Note") { CanvasWindowController.shared.createNote() }
                 .keyboardShortcut("n")
-            Button("Open Canvas") { CanvasWindowController.shared.show() }.keyboardShortcut("0", modifiers: [.command, .shift])
+            AppNavigationCommands()
             Button("Show All Notes") { NoteStore.shared.showAll() }
             Button("Hide All Notes") { store.hideAll() }
             WindowModeCommands()
             Divider()
             ArrangementCommands()
             Divider()
-            Button("Sync Folder…") { CloudSyncController.shared.show() }
-            Divider()
             Button("Quit iStickies2") { NSApplication.shared.terminate(nil) }
         }
         .commands {
             CommandMenu("Notes") {
                 Button("New Note") { CanvasWindowController.shared.createNote() }.keyboardShortcut("n")
-                Button("Open Canvas") { CanvasWindowController.shared.show() }.keyboardShortcut("0", modifiers: [.command, .shift])
+                AppNavigationCommands()
                 Button("Show All Notes") { store.showAll() }
                 Button("Hide All Notes") { store.hideAll() }
                 Divider()
@@ -51,11 +49,12 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        Task { @MainActor in NoteStore.shared.showAll() }
+        Task { @MainActor in CanvasWindowController.shared.show() }
         return true
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Task { @MainActor in NoteStore.shared.restoreWindows(); CloudSyncController.shared.start() }
+        NSApplication.shared.setActivationPolicy(.regular)
+        Task { @MainActor in NoteStore.shared.restoreWindows(); CloudSyncController.shared.start(); CanvasWindowController.shared.show() }
     }
 }

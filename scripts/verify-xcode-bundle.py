@@ -4,6 +4,7 @@ import plistlib
 import sys
 app = Path(sys.argv[1])
 info = plistlib.loads((app/'Contents/Info.plist').read_bytes())
+assert info.get('LSUIElement', False) is False, 'The app must expose a Dock entry'
 assert info['CFBundleDisplayName'] == 'iStickies2'
 assert info['CFBundleIdentifier'] == 'dev.douyixuan.stickies'
 assert info['CFBundleIconFile'] == 'iStickies2.icns'

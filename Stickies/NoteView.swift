@@ -36,6 +36,8 @@ struct NoteHeaderControls: View {
             Menu {
                 Button("New Note") { store.createNote() }
                 Button("Show All Notes") { store.showAll() }
+                AppNavigationCommands()
+                Menu("Note Color") { NoteColorOptions(noteID: noteID) }
                 Button("Hide This Note") { store.hide(noteID) }
                 Divider()
                 Button(store.isCollapsed(noteID) ? "Expand Note" : "Collapse Note") { store.toggleCollapse(noteID) }
@@ -47,14 +49,12 @@ struct NoteHeaderControls: View {
             }
             .accessibilityLabel("Note actions")
             .help("Note actions")
-            Menu {
-                NoteColorOptions(noteID: noteID)
-            } label: {
-                Image(systemName: "paintpalette")
+            Button { CloudSyncController.shared.show() } label: {
+                Image(systemName: "gearshape")
             }
-            .accessibilityLabel("Note color")
-            .accessibilityValue(NotePalette.name(store.note(noteID)?.color ?? 0))
-            .help("Note color: \(NotePalette.name(store.note(noteID)?.color ?? 0))")
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Settings and Sync")
+            .help("Settings and Sync")
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -116,5 +116,16 @@ struct NoteColorOptions: View {
             .accessibilityLabel("Note color")
             .accessibilityValue(NotePalette.name(note.color))
         }
+    }
+}
+
+/// Keep app-wide destinations available from notes and the status menu.
+struct AppNavigationCommands: View {
+    var body: some View {
+        Button("Open Canvas") { CanvasWindowController.shared.show() }
+            .keyboardShortcut("0", modifiers: [.command, .shift])
+        Button("Settings…") { CloudSyncController.shared.show() }
+            .keyboardShortcut(",")
+        Button("Sync Folder…") { CloudSyncController.shared.show() }
     }
 }
