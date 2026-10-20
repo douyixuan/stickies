@@ -17,6 +17,7 @@ struct StickiesApp: App {
             Divider()
             ArrangementCommands()
             Divider()
+            if let error = store.commandServiceError { Text(error) }
             Button("Quit iStickies2") { NSApplication.shared.terminate(nil) }
         }
         .commands {
@@ -39,13 +40,20 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
             CloudSyncController.shared.show()
             return .terminateCancel
         }
-        if NoteStore.shared.flushPendingChanges() { return .terminateNow }
+        if NoteStore.shared.flushPendingChanges() {
+            NoteStore.shared.stopCommandService()
+            return .terminateNow
+        }
         let alert = NSAlert()
         alert.messageText = "Some note changes have not been saved"
         alert.informativeText = "Keep editing to preserve the changes in memory, or explicitly discard them by quitting. " + (NoteStore.shared.persistenceError ?? "")
         alert.addButton(withTitle: "Keep Editing")
         alert.addButton(withTitle: "Quit Without Saving")
-        return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
+        if alert.runModal() == .alertSecondButtonReturn {
+            NoteStore.shared.stopCommandService()
+            return .terminateNow
+        }
+        return .terminateCancel
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -58,6 +66,13 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
-        Task { @MainActor in NoteStore.shared.restoreWindows(); CloudSyncController.shared.start() }
+        Task { @MainActor in
+            NoteStore.shared.restoreWindows()
+            CloudSyncController.shared.start()
+            do { try NoteStore.shared.startCommandService(showWindows: true) }
+            catch { NSLog("Local command service unavailable: %@", String(describing: error)) }
+        }
     }
+
+    func applicationWillTerminate(_ notification: Notification) { NoteStore.shared.stopCommandService() }
 }
