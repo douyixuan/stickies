@@ -16,7 +16,7 @@ struct NoteView: View {
             .padding(8)
             .background(Color(nsColor: NotePalette.color(note.color)))
             .overlay(alignment: .bottom) {
-                if let error = store.persistenceError ?? store.layoutError ?? store.preferenceError {
+                if let error = store.persistenceError ?? store.trashError ?? store.layoutError ?? store.preferenceError {
                     Text(error).font(.caption).foregroundStyle(.red)
                         .padding(8).background(.regularMaterial)
                 }

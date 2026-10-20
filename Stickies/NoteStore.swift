@@ -31,6 +31,15 @@ final class NoteStore: ObservableObject {
             return false
         }
     }
+    @Published private var trash = LocalNoteTrash()
+    @Published private(set) var trashError: String?
+    private var canSaveTrash = true
+    private var trashURL: URL { localDataDirectory.appendingPathComponent("trash.json") }
+    var activeNotes: [StickyNote] { notes.filter { !trash.ids.contains($0.id) } }
+    var trashedNotes: [StickyNote] { notes.filter { trash.ids.contains($0.id) } }
+    var trashWritable: Bool { canSave && canSaveTrash && !hasUnsavedChanges }
+    func isTrashed(_ id: UUID) -> Bool { trash.ids.contains(id) }
+
     @Published private(set) var persistenceError: String?
     @Published private(set) var hasUnsavedChanges = false
     private var canSave = true
@@ -86,6 +95,15 @@ final class NoteStore: ObservableObject {
                 layoutError = "Could not read layout.json. Original file preserved; arrangement and collapse are disabled."
             }
         }
+        if FileManager.default.fileExists(atPath: trashURL.path) {
+            do {
+                let state = try LocalNoteTrash.load(from: trashURL)
+                trash = state
+            } catch {
+                canSaveTrash = false
+                trashError = "Could not read Trash. Original file preserved; trash changes are disabled. All notes remain available."
+            }
+        }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
             notes = try CompatibleNoteFile.decode(Data(contentsOf: fileURL))
@@ -121,7 +139,7 @@ final class NoteStore: ObservableObject {
     }
 
     func hideAll() {
-        for id in notes.map(\.id) { hide(id) }
+        for id in activeNotes.map(\.id) { hide(id) }
     }
 
     @discardableResult
@@ -153,7 +171,7 @@ final class NoteStore: ObservableObject {
     }
 
     func showAll() {
-        for note in notes { show(note.id) }
+        for note in activeNotes { show(note.id) }
     }
 
     func restoreWindows() {
@@ -163,7 +181,7 @@ final class NoteStore: ObservableObject {
                 updateText(id, "Welcome to Stickies\n\nWrite here. Drag the title bar to move this note, or drag a corner to resize.\n\nUse the note menu to open Canvas or arrange notes. Use the gear button for Settings and optional folder sync. Notes stay on this Mac until you enable sync.")
             }
         } else {
-            for note in notes where note.visible { show(note.id) }
+            for note in activeNotes where note.visible { show(note.id) }
         }
         if let persistenceError {
             let alert = NSAlert()
@@ -180,6 +198,7 @@ final class NoteStore: ObservableObject {
     }
 
     func show(_ id: UUID) {
+        guard !isTrashed(id) else { return }
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].visible = true
         if let existing = windows[id] {
@@ -288,12 +307,12 @@ final class NoteStore: ObservableObject {
             persistLayout(state)
             return
         }
-        let ids = notes.filter(\.visible).map(\.id)
+        let ids = activeNotes.filter(\.visible).map(\.id)
         guard !ids.isEmpty else { return }
         let area = bounds ?? NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1200, height: 800)
         let frames = LayoutEngine.arrange(count: ids.count, in: area, strategy: strategy)
         guard frames.count == ids.count else { return }
-        state.snapshot = NoteLayoutState.Snapshot(entries: notes.filter(\.visible).map {
+        state.snapshot = NoteLayoutState.Snapshot(entries: activeNotes.filter(\.visible).map {
             NoteLayoutState.Entry(id: $0.id, frame: $0.frame, collapsed: isCollapsed($0.id))
         }, arrangement: layoutState.arrangement)
         state.arrangement = strategy
@@ -323,7 +342,7 @@ final class NoteStore: ObservableObject {
         isArranging = true
         defer { isArranging = false; save() }
         for entry in snapshot.entries {
-            guard let index = notes.firstIndex(where: { $0.id == entry.id }) else { continue }
+            guard !isTrashed(entry.id), let index = notes.firstIndex(where: { $0.id == entry.id }) else { continue }
             notes[index].frame = restoredPresentation(id: entry.id, frame: entry.frame, screens: screens ?? NSScreen.screens.map(\.visibleFrame))
             applyPresentation(entry.id)
         }

@@ -92,3 +92,13 @@ The user-facing app is **iStickies2**, with a bundled multi-resolution icon dist
 `build-local.sh` now compiles only a binary; it does not create a discoverable app. Do not run that bare binary: it has no preview bundle identity. Use the explicit preview script for isolated development. `preview.sh` is the explicit opt-in to build and launch a developer preview, preserving `build/preview-data`. Release staging uses a non-`.app` payload in a private `.noindex` directory and retains only ZIP/checksum artifacts. Packaging does not install, launch, unregister apps or clean existing copies. `.noindex` is not a guarantee about third-party launcher caches. See [the reversible cleanup and switch plan](docs/LAUNCHER-CLEANUP.md).
 
 The icon source is `Assets/iStickies2.png`; `scripts/build-icon.sh` regenerates the checked-in ICNS at 16–1024 pixels. `verify-delivery.py` validates archived metadata, icon representations, hashes, executable permissions and universal signature without producing a discoverable `.app` or launching anything.
+
+
+## CLI development candidate
+
+`bash scripts/build-cli.sh` builds `build/bin/istk` without opening the app.
+The CLI supports JSON help/version, list/get/search, add/edit, and recoverable local delete/restore.
+All data commands require an explicit directory and the same exclusive lock as the app.
+The app must close normally first. The CLI never enables sync.
+See [CLI commands, local Trash semantics, and exit codes](docs/CLI.md).
+This development candidate is not installed and does not establish full product acceptance.

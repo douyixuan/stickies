@@ -45,7 +45,7 @@ struct CanvasView: View {
     @FocusState private var searchFocused: Bool
 
     private var results: [StickyNote] {
-        store.notes.filter { CanvasQuery.matches($0.text, query: query) }
+        store.activeNotes.filter { CanvasQuery.matches($0.text, query: query) }
     }
 
     var body: some View {
@@ -85,10 +85,13 @@ struct CanvasView: View {
             Text("Manage notes without moving their independent windows.")
                 .font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 12).padding(.bottom, 8)
+            if let error = store.trashError {
+                Text(error).font(.caption).foregroundStyle(.red).padding(8)
+            }
             Divider()
             HSplitView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("\(results.count) of \(store.notes.count) notes")
+                    Text("\(results.count) of \(store.activeNotes.count) notes")
                         .font(.caption).foregroundStyle(.secondary).padding(12)
                     if results.isEmpty {
                         ContentUnavailableView(query.isEmpty ? "No Notes" : "No Matching Notes",
@@ -118,7 +121,7 @@ struct CanvasView: View {
                     }
                 }
                 .frame(minWidth: 260, idealWidth: showBoard ? 600 : 280, maxWidth: showBoard ? .infinity : 380)
-                if let selection, let note = store.note(selection) {
+                if let selection, !store.isTrashed(selection), let note = store.note(selection) {
                     VStack(spacing: 0) {
                         HStack {
                             Text(CanvasQuery.title(note.text)).font(.headline).lineLimit(1)
@@ -152,6 +155,9 @@ struct CanvasView: View {
         .onChange(of: controller.newNoteRequest) { _, _ in
             query = ""
             selection = store.createNote(showWindow: false)
+        }
+        .onChange(of: store.activeNotes.map(\.id)) { _, ids in
+            if let selection, !ids.contains(selection) { self.selection = nil }
         }
         .onChange(of: query) { _, _ in
             if let selection, !results.contains(where: { $0.id == selection }) { self.selection = nil }

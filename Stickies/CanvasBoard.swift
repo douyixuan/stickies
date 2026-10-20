@@ -120,7 +120,7 @@ struct CanvasBoardView: View {
     let query: String
     @ObservedObject private var notes = NoteStore.shared
     @StateObject private var board = CanvasBoardStore(notes: .shared)
-    private var filtered: [StickyNote] { notes.notes.filter { CanvasQuery.matches($0.text, query: query) } }
+    private var filtered: [StickyNote] { notes.activeNotes.filter { CanvasQuery.matches($0.text, query: query) } }
     private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var body: some View {
@@ -131,10 +131,10 @@ struct CanvasBoardView: View {
             VStack(spacing: 8) {
                 HStack {
                     Menu("Arrange Board") {
-                        Button("Free") { board.arrange(.free, ids: notes.notes.map(\.id), columns: columns) }
-                        Button("Grid") { board.arrange(.grid, ids: notes.notes.map(\.id), columns: columns) }
-                        Button("List") { board.arrange(.list, ids: notes.notes.map(\.id), columns: columns) }
-                        Button("Compact") { board.arrange(.compact, ids: notes.notes.map(\.id), columns: columns) }
+                        Button("Free") { board.arrange(.free, ids: notes.activeNotes.map(\.id), columns: columns) }
+                        Button("Grid") { board.arrange(.grid, ids: notes.activeNotes.map(\.id), columns: columns) }
+                        Button("List") { board.arrange(.list, ids: notes.activeNotes.map(\.id), columns: columns) }
+                        Button("Compact") { board.arrange(.compact, ids: notes.activeNotes.map(\.id), columns: columns) }
                         Button("Restore Board") { board.restore() }.disabled(board.state.snapshot == nil)
                     }
                     .disabled(searching || !board.writable)
@@ -162,10 +162,10 @@ struct CanvasBoardView: View {
                 }
             }
         }
-        .onAppear { if !searching { board.ensureEntries(notes.notes.map(\.id)) } }
-        .onChange(of: notes.notes.map(\.id)) { _, ids in if !searching { board.ensureEntries(ids) } }
+        .onAppear { if !searching { board.ensureEntries(notes.activeNotes.map(\.id)) } }
+        .onChange(of: notes.activeNotes.map(\.id)) { _, ids in if !searching { board.ensureEntries(ids) } }
         .onChange(of: searching) { _, active in
-            if !active { board.ensureEntries(notes.notes.map(\.id)) }
+            if !active { board.ensureEntries(notes.activeNotes.map(\.id)) }
         }
     }
 }

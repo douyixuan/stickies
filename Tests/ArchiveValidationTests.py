@@ -10,10 +10,14 @@ with zipfile.ZipFile(source) as archive:
     originals = [(i, archive.read(i)) for i in archive.infolist()]
 root = originals[0][0].filename.split('/')[0] + '/'
 with tempfile.TemporaryDirectory(prefix='istickies2-archive-tests-') as directory:
-    for case in ['empty_manifest', 'extra_app', 'duplicate_path', 'missing_icon', 'corrupt_icon', 'missing_sync_guide']:
+    for case in ['empty_manifest', 'extra_app', 'duplicate_path', 'missing_icon', 'corrupt_icon', 'missing_sync_guide', 'missing_cli']:
         target = Path(directory)/(case + '.zip')
         with zipfile.ZipFile(target, 'w') as output:
             for info, content in originals:
+                if case == 'missing_cli' and info.filename.endswith('/MacOS/istk'):
+                    continue
+                if case == 'missing_cli' and info.filename.endswith('SHA256SUMS.txt'):
+                    content = b'\n'.join(line for line in content.splitlines() if not line.endswith(b'/MacOS/istk')) + b'\n'
                 if case == 'missing_sync_guide' and info.filename.endswith('SYNC.md'):
                     continue
                 if case == 'missing_sync_guide' and info.filename.endswith('SHA256SUMS.txt'):

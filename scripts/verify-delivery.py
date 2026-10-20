@@ -64,6 +64,15 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
             target.write_bytes(archive.read(entry))
             target.chmod((entry.external_attr >> 16) & 0o777)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(payload)], check=True)
+        cli = payload/'Contents/MacOS/istk'
+        assert cli.is_file() and cli.stat().st_mode & 0o111
+        assert set(subprocess.check_output(['lipo', '-archs', str(cli)], text=True).split()) == {'arm64', 'x86_64'}
+        import json
+        cli_help = json.loads(subprocess.check_output([str(cli), 'help']))
+        assert cli_help['ok'] and 'restore' in cli_help['data']['commands']
+        cli_version = json.loads(subprocess.check_output([str(cli), 'version']))
+        assert cli_version['data']['commit'] == info['StickiesGitCommit']
+        assert (payload/'Contents/Resources/CLI.md').read_text().strip()
         checker = payload/'Contents/MacOS/NoteDataCheck'
         assert checker.is_file() and checker.stat().st_mode & 0o111
         assert set(subprocess.check_output(['lipo', '-archs', str(checker)], text=True).split()) == {'arm64', 'x86_64'}
