@@ -26,9 +26,9 @@ for architecture in arm64 x86_64; do
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
         -target "${architecture}-apple-macosx14.0" Stickies/*.swift -o "$RELEASE_STAGE/Stickies-$architecture"
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
-        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Tools/NoteDataCheck.swift -o "$RELEASE_STAGE/check-$architecture"
+        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Stickies/LocalNoteTrash.swift Stickies/SerializedNoteCommands.swift Stickies/SegmentedCommandLedger.swift Tools/NoteDataCheck.swift -o "$RELEASE_STAGE/check-$architecture"
     xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library \
-        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Stickies/LocalNoteTrash.swift Stickies/SerializedNoteCommands.swift Stickies/LocalCommandSocket.swift Tools/Istk.swift -o "$RELEASE_STAGE/istk-$architecture"
+        -target "${architecture}-apple-macosx14.0" Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Stickies/LocalNoteTrash.swift Stickies/SerializedNoteCommands.swift Stickies/SegmentedCommandLedger.swift Stickies/LocalCommandSocket.swift Tools/Istk.swift -o "$RELEASE_STAGE/istk-$architecture"
 done
 lipo -create "$RELEASE_STAGE/istk-arm64" "$RELEASE_STAGE/istk-x86_64" -output "$APP/Contents/MacOS/istk"
 codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/istk"

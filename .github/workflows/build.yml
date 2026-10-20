@@ -41,6 +41,8 @@ jobs:
         run: bash scripts/test-delivery-recovery.sh
       - name: Test serialized commands and process-crash recovery without windows
         run: bash scripts/test-command-core.sh
+      - name: Test explicit ledger migration and old-writer gates without windows
+        run: bash scripts/test-segmented-ledger.sh
       - name: Test local command transport without windows
         run: bash scripts/test-command-channel.sh
       - name: Build

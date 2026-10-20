@@ -7,7 +7,7 @@ for source in Stickies/*.swift; do
     [[ "$source" == "Stickies/StickiesApp.swift" ]] || SOURCES+=("$source")
 done
 xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library "${SOURCES[@]}" Tests/CompatibilityTests.swift -o build/compatibility-tests
-xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Tools/NoteDataCheck.swift -o build/bin/NoteDataCheck
+xcrun swiftc -module-cache-path "$PWD/build/module-cache" -parse-as-library Stickies/StickyNote.swift Stickies/CompatibleNoteFile.swift Stickies/LosslessJSON.swift Stickies/LocalNoteTrash.swift Stickies/SerializedNoteCommands.swift Stickies/SegmentedCommandLedger.swift Tools/NoteDataCheck.swift -o build/bin/NoteDataCheck
 TEST_DATA=$(mktemp -d "${TMPDIR:-/tmp}/stickies-compatibility.XXXXXX")
 trap 'rm -rf "$TEST_DATA"' EXIT
 STICKIES_DATA_DIR="$TEST_DATA" build/compatibility-tests unit
