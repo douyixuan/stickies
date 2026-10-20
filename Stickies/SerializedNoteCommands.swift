@@ -96,7 +96,12 @@ enum SerializedNoteCommands {
     static func recover(in directory: URL, checkpoint: (Stage) throws -> Void = { _ in }) throws {
         let url = directory.appendingPathComponent(journalName)
         guard let data = try read(url) else {
-            try SegmentedCommandLedger.validate(checkedNotes(in: directory), in: directory)
+            let notes = try checkedNotes(in: directory)
+            // Without a journal, legacy parse failures belong to the normal read-only
+            // loader. Only an identifiable schema-3 inventory needs this recovery gate.
+            if let notes, let raw = try? LosslessJSON.parse(notes), case .scalar("3")? = raw.object?["schemaVersion"] {
+                try SegmentedCommandLedger.validate(notes, in: directory)
+            }
             return
         }
         let journal: Journal
