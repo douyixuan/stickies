@@ -1,7 +1,7 @@
 # 完整验收门槛
 
 这是对恢复的 PRD V0.2、后续同步目标及最新用户反馈的验收汇总。
-当前完整产品状态为**部分验证**。历史自动测试只证明对应代码路径；代码合入主线不等于安装、发布或完整产品验收。任一必需项缺失，不安装、不交付。
+当前完整产品状态为**部分验证**。历史自动测试只证明对应代码路径；代码合入主线不等于安装、发布或完整产品验收。完整产品验收与可靠新版日用更新分开记录；2026-10-21 用户允许可靠新版更新，但保存退出、备份及安装前检查仍必需。
 
 本轮集成范围是 [#16](https://github.com/douyixuan/stickies/pull/16) 的桌面优先入口、CLI 与本机 Trash，[#17](https://github.com/douyixuan/stickies/pull/17) 的隔离 GUI 测试门禁，[#18](https://github.com/douyixuan/stickies/pull/18) 的串行事务与幂等恢复，[#19](https://github.com/douyixuan/stickies/pull/19) 的本地命令通道，[#20](https://github.com/douyixuan/stickies/pull/20) 的单张置顶覆盖与可恢复操作，以及 [#21](https://github.com/douyixuan/stickies/pull/21) 的显式离线账本分段迁移。各 PR 的合入状态以 GitHub 为准；当前主线构建结果见 [main CI](https://github.com/douyixuan/stickies/actions/workflows/build.yml?query=branch%3Amain)。
 
@@ -24,7 +24,7 @@
 | 两台 Mac 同步 | 同一云盘目录中双向新增/编辑、离线并发冲突、选择版本、删除/恢复、重新启动均通过 | 临时本地双副本通过；真实云盘与两台 Mac 尚未验收，不能用 CI替代 |
 | 设备分离 | 同步正文/颜色，不同步设备 frame、可见性和窗口模式；无意外覆盖新编辑 | 隔离兼容与状态机测试通过；真实双机待验证 |
 | CloudKit 边界 | 如要求 CloudKit，须有签名/container/实际双设备证据；目录模式不要求开发者账号 | 当前实现提供目录模式；CloudKit 仅适配器，真实 CloudKit 未验收 |
-| 安装 | 完整范围全部验证后，正常保存退出、验证备份、原位升级，保持唯一应用与原数据目录 | 当前安装仍为 c199a7a/0.3.58；最新用户明确暂停所有中间安装 |
+| 安装 | 完整范围全部验证后，正常保存退出、验证备份、原位升级，保持唯一应用与原数据目录 | 当前安装仍为 c199a7a/0.3.58；2026-10-21 用户授权可靠新版日用更新；0.3.81 候选已验证，实际安装等待保存退出确认 |
 | 最终审查 | 完整最终差异独立 review；PR CI及最终 main CI通过；未解决阻断为零 | 组合代码 0a26b3346525b3b93377c1edb6bb0011b5928c29 独立复审、完整本机回归、[push CI](https://github.com/douyixuan/stickies/actions/runs/39411434021) 与 [PR CI](https://github.com/douyixuan/stickies/actions/runs/39411439679) 通过；两次 CI 暴露的旧恢复回归已修复。主线准确提交 CI 必须另行核对，不能沿用候选结果。CodeRabbit跳过draft不算审查通过；GUI与真实双机仍未验收 |
 
 # 真实验收阻点
@@ -32,3 +32,29 @@
 目前没有已批准且安全的交互式 GUI 验收路径。不得使用已停止的不安全 GUI/剪贴板流程，不得代点权限。
 真实双机和云盘传输尚无证据。用户提供截图可证明已出现的问题，不能证明修正后的画面。
 这些缺口由开发/QA流程解决，不能把逐项手工测试转交用户并称为交付。
+
+
+# Roadmap 原始来源映射
+
+原 PRD V0.2：[恢复来源](https://chatgpt.com/c/6acf79ac-9cb0-83e8-9282-14f16f87aec9?messageId=cd6c7e99-802e-4078-8a98-555d420f0ce0)。以下依据父流程恢复的原文要点，不声称本任务已读取完整对话。
+
+| Roadmap 模块 | 恢复的原始范围与边界 |
+| --- | --- |
+| 便签窗口 | Desktop / Floating / Canvas；Spaces、Mission Control、全屏、Stage Manager、多屏恢复 |
+| 便签操作 | 直接编辑、拖动、缩放、折叠、颜色、置顶、删除、隐藏；新建/搜索/排列快捷键。多选和批量删除作用范围仍待决定 |
+| 布局整理 | P0 Free/Grid/List/Compact/Restore；P1 Snap/Undo/Workspace；P2 Group 分组移动和统一折叠。P1/P2 是原路线图范围，当前未实施，不因列出而授权立即开发 |
+| 数据可靠性 | 原模型 Note/Workspace/Placement/DeviceState，要求内容与布局分离。当前本地侧文件和兼容层不等于完整 Workspace 模型已经实现；工作区能力仍在 P1 |
+| 可选同步 | 可选 iCloud、离线编辑、冲突副本、双机同步、窗口布局本机优先。原设计 CloudKit 与当前目录同步实现路线有差异：目录方案已有实现及隔离证据，不能据此声称原 CloudKit 路线完成；也不强加 CloudKit 为目录方案验收前置条件。当前有效产品决定允许云目录路线，CloudKit 不另列必做功能；早期技术设计差异仅在此保留 |
+| 命令行操作 | 已授权的后续 CLI 切片 #16/#18/#19/#21；不倒填为原 PRD P0，最初用户原话完整来源仍待补证 |
+| 日用更新 | 用户 2026-10-21 原话“你每天有新版就给我安装使用”；不是强退、自动迁移或绕过权限授权。未约定每日自动安装调度 |
+
+原富 UI 验收清单全文仍待证。MVP 明确排除 Markdown 富文本、附件、跨平台、协作、AI、复杂任务和 Keep 双向同步，不列入必做功能树。
+
+Roadmap 的“待验收”不证明已安装或完成；按功能范围选择验收环境，CLI 可用真实候选包执行隔离样本验收，不要求破坏性操作用户真实数据。GUI、双机和安装仍须各自验收。0.3.81 对应 main `aa30d0516ae5cde9fc5512641ff3151f23e97bcb`，[准确 main CI](https://github.com/douyixuan/stickies/actions/runs/39414876063) 通过；当前日用仍为 0.3.58。候选包、兼容性及合成数据回滚证据位于本任务工作区 `daily-update-081/verification.json` 和 `rollback-verification.json`，不代表真实备份或 GUI/双机验收。
+
+
+## Roadmap 勾选依据
+
+- **命令行操作 → 本机删除恢复：已勾选。** 已验证的 0.3.81 包内 `istk` 在独立合成 profile 执行 `delete`、`restore`，随后以新进程 `get` 验证更新后的正文恢复；对应本任务 `daily-update-081/test-candidate.py` 与 `verification.json`。候选源码为 `aa30d0516ae5cde9fc5512641ff3151f23e97bcb`，ZIP SHA-256 为 `85dfd2f653aa07cf38ba7c95fb321348b9e680a7a320ae8887b00c2d75510301`。本项仅指 CLI 本机操作，不覆盖 UI 多选、同步删除或日用安装。
+- **命令增改查找：暂不勾选。** 包内已有 add/edit/get 实测，但该完整叶子包含 search，现有包内实测记录未覆盖搜索结果断言；不拿模型测试或部分命令通过替代全部范围。
+- **其余项：未勾选。** GUI、真实双机、安装仍有验收缺口；应用命令共存等不可只凭单位模型通过勾选。50 条便签是布局验收规模，保留在本验收表，不另作功能项。
