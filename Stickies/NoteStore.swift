@@ -21,15 +21,29 @@ final class NoteStore: ObservableObject {
     @Published private var undoLayoutSnapshot: NoteLayoutState.Snapshot?
     private var layoutGestureID: UUID?
     private var layoutGestureCaptured = false
+    private var layoutGestureResized = false
     var canUndoLayout: Bool { undoLayoutSnapshot != nil && localStateWritable && canSaveLayout }
 
     func beginLayoutGesture(_ id: UUID) {
         layoutGestureID = id
         layoutGestureCaptured = false
+        layoutGestureResized = false
     }
 
-    func endLayoutGesture(_ id: UUID) {
-        if layoutGestureID == id { layoutGestureID = nil; layoutGestureCaptured = false }
+    func endLayoutGesture(_ id: UUID, screens: [CGRect]? = nil) {
+        guard layoutGestureID == id else { return }
+        let shouldSnap = layoutGestureCaptured && !layoutGestureResized && snapToScreenEdges && localStateWritable
+        layoutGestureID = nil
+        layoutGestureCaptured = false
+        layoutGestureResized = false
+        guard shouldSnap, let index = notes.firstIndex(where: { $0.id == id }), !isTrashed(id) else { return }
+        let rendered = layoutState.renderedFrame(id: id, expanded: notes[index].frame)
+        let snapped = LayoutEngine.snapToScreenEdges(rendered, screens: screens ?? NSScreen.screens.map(\.visibleFrame))
+        guard snapped != rendered else { return }
+        // The drag's original undo remains the before-image; snapping is part of that same gesture.
+        notes[index].frame = layoutState.expandedFrame(id: id, rendered: snapped, previous: notes[index].frame)
+        applyPresentation(id)
+        save()
     }
 
     private func layoutSnapshot(ids: Set<UUID>) -> NoteLayoutState.Snapshot {
@@ -94,6 +108,8 @@ final class NoteStore: ObservableObject {
     @Published private(set) var keepOnTop = false
     @Published private(set) var windowMode: NoteWindowMode = .standard
     @Published private(set) var floatingOverrides: [String: Bool] = [:]
+    @Published private(set) var snapToScreenEdges = false
+    var canChangeWindowPreferences: Bool { localStateWritable && canSavePreferences }
     @Published private(set) var preferenceError: String?
     private var canSavePreferences = true
     private var preferencesURL: URL { fileURL.deletingLastPathComponent().appendingPathComponent("preferences.json") }
@@ -102,6 +118,7 @@ final class NoteStore: ObservableObject {
         var keepOnTop: Bool
         var windowMode: NoteWindowMode?
         var floatingOverrides: [String: Bool]?
+        var snapToScreenEdges: Bool?
     }
 
 
@@ -139,6 +156,7 @@ final class NoteStore: ObservableObject {
                     throw CocoaError(.fileReadCorruptFile)
                 }
                 floatingOverrides = preferences.floatingOverrides ?? [:]
+                snapToScreenEdges = preferences.snapToScreenEdges ?? false
                 windowMode = preferences.windowMode ?? (preferences.keepOnTop ? .floating : .standard)
                 keepOnTop = windowMode == .floating
             } catch {
@@ -212,15 +230,21 @@ final class NoteStore: ObservableObject {
         persistWindowPreferences(mode: mode, overrides: floatingOverrides)
     }
 
-    private func persistWindowPreferences(mode: NoteWindowMode, overrides: [String: Bool]) {
+    func setSnapToScreenEdges(_ enabled: Bool) {
+        persistWindowPreferences(mode: windowMode, overrides: floatingOverrides, snap: enabled)
+    }
+
+    private func persistWindowPreferences(mode: NoteWindowMode, overrides: [String: Bool], snap: Bool? = nil) {
         guard canSave, contentEditingAllowed, canSavePreferences else { return }
         do {
             try validateSegmentedProfile()
-            try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode, floatingOverrides: overrides))
+            try JSONEncoder().encode(Preferences(keepOnTop: mode == .floating, windowMode: mode, floatingOverrides: overrides,
+                                                        snapToScreenEdges: snap ?? snapToScreenEdges))
                 .write(to: preferencesURL, options: .atomic)
             windowMode = mode
             keepOnTop = mode == .floating
             floatingOverrides = overrides
+            snapToScreenEdges = snap ?? snapToScreenEdges
             for (id, window) in windows {
                 let effective = effectiveWindowMode(id)
                 window.level = effective.level
@@ -228,7 +252,7 @@ final class NoteStore: ObservableObject {
             }
             preferenceError = nil
         } catch {
-            preferenceError = "Window mode could not be saved; the previous mode is unchanged: \(error.localizedDescription)"
+            preferenceError = "Window preferences could not be saved; previous settings are unchanged: \(error.localizedDescription)"
         }
     }
 
@@ -392,6 +416,7 @@ final class NoteStore: ObservableObject {
               let index = notes.firstIndex(where: { $0.id == id }) else { return }
         let expanded = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
         guard expanded != notes[index].frame else { return }
+        if layoutGestureID == id && expanded.size != notes[index].frame.size { layoutGestureResized = true }
         if layoutGestureID == id && !layoutGestureCaptured && localStateWritable && canSaveLayout {
             undoLayoutSnapshot = layoutSnapshot(ids: [id])
             layoutGestureCaptured = true

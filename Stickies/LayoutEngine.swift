@@ -22,6 +22,31 @@ enum LayoutEngine {
         return constrain(frame, to: bounds, minimumHeight: minimumHeight)
     }
 
+    /// Snap translations only, within the current display's usable area. Never resize or teleport.
+    static func snapToScreenEdges(_ frame: CGRect, screens: [CGRect], threshold: CGFloat = 12) -> CGRect {
+        func valid(_ rect: CGRect) -> Bool {
+            [rect.minX, rect.minY, rect.width, rect.height].allSatisfy { $0.isFinite }
+                && rect.width > 0 && rect.height > 0
+        }
+        guard valid(frame), threshold.isFinite, threshold >= 0 else { return frame }
+        let candidates = screens.filter { valid($0) && area(frame.intersection($0)) > 0 }.sorted {
+            let a = area(frame.intersection($0)), b = area(frame.intersection($1))
+            if a != b { return a > b }
+            if $0.minX != $1.minX { return $0.minX < $1.minX }
+            return $0.minY < $1.minY
+        }
+        guard let bounds = candidates.first, frame.width <= bounds.width, frame.height <= bounds.height else { return frame }
+        func snapped(_ value: CGFloat, to edges: [CGFloat]) -> CGFloat {
+            guard let edge = edges.min(by: { abs($0 - value) < abs($1 - value) }),
+                  abs(edge - value) <= threshold else { return value }
+            return edge
+        }
+        var result = frame
+        result.origin.x = snapped(frame.minX, to: [bounds.minX, bounds.maxX - frame.width])
+        result.origin.y = snapped(frame.minY, to: [bounds.minY, bounds.maxY - frame.height])
+        return bounds.contains(result) ? result : frame
+    }
+
     private static func area(_ rect: CGRect) -> CGFloat {
         rect.isNull ? 0 : rect.width * rect.height
     }

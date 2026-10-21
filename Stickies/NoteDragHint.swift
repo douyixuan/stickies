@@ -26,6 +26,8 @@ final class NoteWindow: NSWindow {
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .leftMouseDown { onLayoutGestureBegan?() }
+        // Native title dragging and performDrag may consume mouse-up inside their tracking loop.
+        defer { if event.type == .leftMouseDown { onLayoutGestureEnded?() } }
         if event.type == .leftMouseUp { onLayoutGestureEnded?() }
         if event.type == .leftMouseDown, event.clickCount == 2,
            event.locationInWindow.y >= contentLayoutRect.maxY,
