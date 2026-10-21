@@ -42,6 +42,8 @@ final class CanvasBoardStore: ObservableObject {
     private let notes: NoteStore
     private let url: URL
     private var validFile = true
+    @Published private var undoSnapshot: CanvasBoardState.Snapshot?
+    var canUndo: Bool { writable && undoSnapshot != nil }
     var writable: Bool { notes.localStateWritable && validFile }
 
     init(notes: NoteStore) {
@@ -58,12 +60,15 @@ final class CanvasBoardStore: ObservableObject {
         }
     }
     @discardableResult
-    private func commit(_ next: CanvasBoardState) -> Bool {
+    private func commit(_ next: CanvasBoardState, recordUndo: Bool = false) -> Bool {
         guard writable else { return false }
         do {
             try next.validate()
             // Before-image and resulting positions commit together in one local atomic file.
             try JSONEncoder().encode(next).write(to: url, options: .atomic)
+            if recordUndo && next.frames != state.frames {
+                undoSnapshot = CanvasBoardState.Snapshot(frames: state.frames, arrangement: state.arrangement)
+            }
             state = next
             error = nil
             return true
@@ -96,7 +101,11 @@ final class CanvasBoardStore: ObservableObject {
             next.frames.merge(frames) { _, new in new }
         }
         next.arrangement = strategy
-        commit(next)
+        let changed = next.frames != state.frames
+        if commit(next, recordUndo: true), strategy != .free, changed {
+            // Include the fallback frames for cards not yet initialized by onChange.
+            undoSnapshot = next.snapshot
+        }
     }
     func move(_ id: UUID, to origin: CGPoint) {
         guard var frame = state.frames[id], origin.x.isFinite, origin.y.isFinite else { return }
@@ -104,14 +113,21 @@ final class CanvasBoardStore: ObservableObject {
         var next = state
         next.frames[id] = frame
         next.arrangement = .free
-        commit(next)
+        commit(next, recordUndo: true)
     }
     func restore() {
         guard let snapshot = state.snapshot else { return }
         var next = state
         next.frames.merge(snapshot.frames) { _, old in old }
         next.arrangement = snapshot.arrangement
-        commit(next)
+        commit(next, recordUndo: true)
+    }
+    func undo() {
+        guard canUndo, let snapshot = undoSnapshot else { return }
+        let ids = Set(notes.activeNotes.map(\.id))
+        var next = state
+        for (id, frame) in snapshot.frames where ids.contains(id) { next.frames[id] = frame }
+        if commit(next) { undoSnapshot = nil }
     }
 }
 
@@ -119,7 +135,7 @@ struct CanvasBoardView: View {
     @Binding var selection: UUID?
     let query: String
     @ObservedObject private var notes = NoteStore.shared
-    @StateObject private var board = CanvasBoardStore(notes: .shared)
+    @ObservedObject var board: CanvasBoardStore
     private var filtered: [StickyNote] { notes.activeNotes.filter { CanvasQuery.matches($0.text, query: query) } }
     private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
@@ -131,6 +147,8 @@ struct CanvasBoardView: View {
             VStack(spacing: 8) {
                 HStack {
                     Menu("Arrange Board") {
+                        Button("Undo Last Board Layout") { board.undo() }.disabled(!board.canUndo)
+                            .help("Undo the last board move or arrangement in this session.")
                         Button("Free") { board.arrange(.free, ids: notes.activeNotes.map(\.id), columns: columns) }
                         Button("Grid") { board.arrange(.grid, ids: notes.activeNotes.map(\.id), columns: columns) }
                         Button("List") { board.arrange(.list, ids: notes.activeNotes.map(\.id), columns: columns) }
