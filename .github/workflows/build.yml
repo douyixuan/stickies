@@ -35,6 +35,8 @@ jobs:
         run: bash scripts/test-layout-undo.sh
       - name: Test window edge snapping without windows
         run: bash scripts/test-window-snap.sh
+      - name: Test named layout workspaces without windows
+        run: bash scripts/test-workspaces.sh
       - name: Test window mode preferences without windows
         run: bash scripts/test-window-mode.sh
       - name: Test single-note actions and local overrides without windows
