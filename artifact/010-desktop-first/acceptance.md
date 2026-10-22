@@ -127,3 +127,13 @@ A synthetic hard-linked profile reproduces the failure on f8fd28f. The fix permi
 The isolated app-store path covers load, the same create operation used by the New Note button, edit, save, and a new-process reload. It checks that the other link stays byte-identical and the strict CLI gate remains active. Existing lock/crash/retry tests also pass. This is not a rendered GUI click/editor acceptance. No live data or running app was changed. A replacement still requires a safe normal exit; the full GUI new-note flow remains pending.
 
 Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2 extension fields survive. The other link stays unchanged. All delivery recovery phases and 14 command-core tests pass. Independent static review found no data-safety blocker. Schema3 hard-linked profiles retain the strict startup gate and cannot accept unsaved edits. A valid isolated migrated profile verifies this boundary after automated review identified the need for an explicit startup check.
+
+## 2026-10-22 今晚流程接入结果
+
+对应同一功能项：[新建、编辑、保存与恢复](../../roadmap/note-lifecycle.md)。这是今晚既有计划的调整，不新增平行计划或状态台账。
+
+本轮实际完成：新增该闭环的需求来源、根叶子映射、用户流程、完成定义、分层验收标准和项目运行/锁/备份门槛；根 ROADMAP 的八个相关叶子链接到细化文件，层级和勾选保持不变。复核 0.3.91 用户失败、PR #27 修复主线、0.3.94 未安装及 Store/GUI 证据边界。已有回归与准确主线 CI 只作为既有证据引用，不计作今晚新增测试。
+
+今晚可独立完成范围为文件映射、链接检查、通用格式接入及文档提交审查。通用模板与检查入口待 Didadi 原任务/父任务提供后适配；不另造一套标准。真实 GUI 操作及安全替换不在当前许可内，本轮未执行，也不转交用户代测。对应根叶子仍未勾选。未来获准后由执行者按细化文件完成真实闭环并留证。
+
+文档发布与准确 CI 链接以本轮后续 PR 为准；此记录不把文件落地视为功能验收完成。
