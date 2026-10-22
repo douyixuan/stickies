@@ -17,6 +17,85 @@ final class NoteStore: ObservableObject {
     var canRestoreLayout: Bool { layoutState.snapshot != nil && canSave && canSaveLayout }
     func isCollapsed(_ id: UUID) -> Bool { layoutState.collapsed.contains(id) }
 
+    @Published private(set) var workspaceLayouts = WorkspaceLayouts()
+    @Published private(set) var workspaceError: String?
+    private var canSaveWorkspaces = true
+    private var workspacesURL: URL { localDataDirectory.appendingPathComponent("workspaces.json") }
+    var canUseWorkspaces: Bool { localStateWritable && canSaveWorkspaces && canSaveLayout }
+
+    private func workspacePlacements() -> [WorkspaceLayouts.Placement] {
+        activeNotes.map { WorkspaceLayouts.Placement(id: $0.id, frame: $0.frame) }
+    }
+
+    private func persistWorkspaces(_ state: WorkspaceLayouts) -> Bool {
+        guard canUseWorkspaces else { return false }
+        do {
+            try state.validate()
+            try validateSegmentedProfile()
+            try JSONEncoder().encode(state).write(to: workspacesURL, options: .atomic)
+            workspaceLayouts = state
+            workspaceError = nil
+            return true
+        } catch {
+            workspaceError = "Workspace could not be saved. Use a unique name of 1–80 characters, or retry after fixing storage: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func createWorkspace(name: String) -> UUID? {
+        guard canUseWorkspaces else { return nil }
+        var state = workspaceLayouts
+        let id = UUID()
+        state.items.append(.init(id: id, name: name.trimmingCharacters(in: .whitespacesAndNewlines), placements: workspacePlacements()))
+        return persistWorkspaces(state) ? id : nil
+    }
+
+    @discardableResult
+    func renameWorkspace(_ id: UUID, name: String) -> Bool {
+        var state = workspaceLayouts
+        guard let index = state.items.firstIndex(where: { $0.id == id }) else { return false }
+        state.items[index].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return persistWorkspaces(state)
+    }
+
+    @discardableResult
+    func saveWorkspace(_ id: UUID) -> Bool {
+        var state = workspaceLayouts
+        guard let index = state.items.firstIndex(where: { $0.id == id }) else { return false }
+        state.items[index].placements = workspacePlacements()
+        return persistWorkspaces(state)
+    }
+
+    @discardableResult
+    func switchWorkspace(_ id: UUID, screens: [CGRect]? = nil) -> Bool {
+        guard canUseWorkspaces, let workspace = workspaceLayouts.items.first(where: { $0.id == id }) else { return false }
+        // Never replace unsaved content; retry it first using the existing lossless writer.
+        guard flushPendingChanges() else {
+            workspaceError = "Save pending note edits before switching. Your edits remain in memory; retry when storage is available."
+            return false
+        }
+        let validScreens = (screens ?? NSScreen.screens.map(\.visibleFrame)).filter {
+            [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) && $0.width > 0 && $0.height > 0
+        }.sorted { $0.minX == $1.minX ? $0.minY < $1.minY : $0.minX < $1.minX }
+        let before = layoutSnapshot(ids: Set(workspace.placements.map(\.id)))
+        var changed = false
+        isArranging = true
+        defer { isArranging = false }
+        for placement in workspace.placements {
+            guard !isTrashed(placement.id), let index = notes.firstIndex(where: { $0.id == placement.id }) else { continue }
+            let frame = restoredPresentation(id: placement.id, frame: placement.frame, screens: validScreens)
+            changed = changed || frame != notes[index].frame
+            notes[index].frame = frame
+            applyPresentation(placement.id)
+        }
+        if changed {
+            undoLayoutSnapshot = before
+            save()
+        }
+        workspaceError = hasUnsavedChanges ? "Layout is applied but could not be saved. Retry saving; Undo Last Layout is still available." : nil
+        return !hasUnsavedChanges
+    }
+
     // One session-local before-image; durable arrangement Restore remains unchanged.
     @Published private var undoLayoutSnapshot: NoteLayoutState.Snapshot?
     private var layoutGestureID: UUID?
@@ -172,6 +251,16 @@ final class NoteStore: ObservableObject {
             } catch {
                 canSaveLayout = false
                 layoutError = "Could not read layout.json. Original file preserved; arrangement and collapse are disabled."
+            }
+        }
+        if FileManager.default.fileExists(atPath: workspacesURL.path) {
+            do {
+                let state = try JSONDecoder().decode(WorkspaceLayouts.self, from: Data(contentsOf: workspacesURL))
+                try state.validate()
+                workspaceLayouts = state
+            } catch {
+                canSaveWorkspaces = false
+                workspaceError = "Could not read workspaces.json. Original file preserved; workspace changes are disabled."
             }
         }
         if FileManager.default.fileExists(atPath: trashURL.path) {

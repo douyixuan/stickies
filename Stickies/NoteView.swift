@@ -111,6 +111,7 @@ struct LocalTrashCommands: View {
 struct ArrangementCommands: View {
     @ObservedObject private var store = NoteStore.shared
     var body: some View {
+        Button("Layout Workspaces…") { WorkspaceWindowController.shared.show() }
         Toggle("Snap to Screen Edges", isOn: Binding(
             get: { store.snapToScreenEdges }, set: { store.setSnapToScreenEdges($0) }
         ))
