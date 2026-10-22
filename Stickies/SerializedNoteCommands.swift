@@ -52,18 +52,18 @@ enum SerializedNoteCommands {
         encoder.outputFormatting = [.sortedKeys]
         return try encoder.encode(value)
     }
-    static func read(_ url: URL) throws -> Data? {
+    static func read(_ url: URL, allowSharedInode: Bool = false) throws -> Data? {
         var info = stat()
         if lstat(url.path, &info) != 0 {
             if errno == ENOENT { return nil }
             throw CocoaError(.fileReadUnknown)
         }
-        guard (info.st_mode & S_IFMT) == S_IFREG, info.st_nlink == 1 else { throw Failure.unsafeFile }
+        guard (info.st_mode & S_IFMT) == S_IFREG, (allowSharedInode || info.st_nlink == 1) else { throw Failure.unsafeFile }
         guard info.st_size <= 64 * 1024 * 1024 else { throw Failure.invalidState }
         return try Data(contentsOf: url)
     }
-    static func checkedNotes(in directory: URL) throws -> Data? {
-        let notes = try read(directory.appendingPathComponent("notes.json"))
+    static func checkedNotes(in directory: URL, allowSharedInode: Bool = false) throws -> Data? {
+        let notes = try read(directory.appendingPathComponent("notes.json"), allowSharedInode: allowSharedInode)
         if notes == nil {
             let names = try FileManager.default.contentsOfDirectory(atPath: directory.path)
             guard !names.contains(ledgerName), !names.contains(where: { $0.hasPrefix("command-segment-") }) else {
@@ -96,7 +96,10 @@ enum SerializedNoteCommands {
     static func recover(in directory: URL, checkpoint: (Stage) throws -> Void = { _ in }) throws {
         let url = directory.appendingPathComponent(journalName)
         guard let data = try read(url) else {
-            let notes = try checkedNotes(in: directory)
+            // With no pending journal, loading a regular hard-linked notes file is safe.
+            // GUI saves atomically replace this path and leave the other link unchanged.
+            // Journal recovery and CLI transactions retain the strict single-link gate.
+            let notes = try checkedNotes(in: directory, allowSharedInode: true)
             // Without a journal, legacy parse failures belong to the normal read-only
             // loader. Only an identifiable schema-3 inventory needs this recovery gate.
             if let notes, let raw = try? LosslessJSON.parse(notes), case .scalar("3")? = raw.object?["schemaVersion"] {
