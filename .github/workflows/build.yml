@@ -11,6 +11,7 @@ jobs:
           fetch-depth: 0
       - name: Check roadmap evidence structure without services
         env:
+          PYTHONDONTWRITEBYTECODE: "1"
           ROADMAP_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           if [ -z "$ROADMAP_BASE_SHA" ] || [ "$ROADMAP_BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
