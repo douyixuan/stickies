@@ -21,8 +21,12 @@ final class NoteDragHint: NSView {
 /// Title double-click folds a note; text and native/SwiftUI controls keep their usual events.
 final class NoteWindow: NSWindow {
     var onTitleDoubleClick: (() -> Void)?
+    var onLayoutGestureBegan: (() -> Void)?
+    var onLayoutGestureEnded: (() -> Void)?
 
     override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown { onLayoutGestureBegan?() }
+        if event.type == .leftMouseUp { onLayoutGestureEnded?() }
         if event.type == .leftMouseDown, event.clickCount == 2,
            event.locationInWindow.y >= contentLayoutRect.maxY,
            let root = contentView?.superview {

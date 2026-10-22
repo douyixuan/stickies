@@ -41,6 +41,7 @@ struct CanvasView: View {
     @ObservedObject private var controller = CanvasWindowController.shared
     @State private var query = ""
     @State private var showBoard = false
+    @StateObject private var board = CanvasBoardStore(notes: .shared)
     @State private var selection: UUID?
     @FocusState private var searchFocused: Bool
 
@@ -102,7 +103,7 @@ struct CanvasView: View {
                                                systemImage: "note.text",
                                                description: Text(query.isEmpty ? "Create a note to get started." : "Try different search words."))
                     } else if showBoard {
-                        CanvasBoardView(selection: $selection, query: query)
+                        CanvasBoardView(selection: $selection, query: query, board: board)
                     } else {
                         List(selection: $selection) {
                             ForEach(results) { note in

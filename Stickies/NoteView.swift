@@ -111,6 +111,10 @@ struct LocalTrashCommands: View {
 struct ArrangementCommands: View {
     @ObservedObject private var store = NoteStore.shared
     var body: some View {
+        Button("Undo Last Layout") { store.undoLastLayout() }
+            .keyboardShortcut("z", modifiers: [.command, .option])
+            .disabled(!store.canUndoLayout)
+            .help("Undo the last window move, resize or arrangement in this session. Text is unchanged.")
         Button("Free Layout") { store.arrange(.free) }.keyboardShortcut("0", modifiers: [.command, .option])
         Button("Arrange Grid") { store.arrange(.grid) }.keyboardShortcut("1", modifiers: [.command, .option])
         Button("Arrange List") { store.arrange(.list) }.keyboardShortcut("2", modifiers: [.command, .option])

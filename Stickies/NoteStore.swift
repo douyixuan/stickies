@@ -17,6 +17,43 @@ final class NoteStore: ObservableObject {
     var canRestoreLayout: Bool { layoutState.snapshot != nil && canSave && canSaveLayout }
     func isCollapsed(_ id: UUID) -> Bool { layoutState.collapsed.contains(id) }
 
+    // One session-local before-image; durable arrangement Restore remains unchanged.
+    @Published private var undoLayoutSnapshot: NoteLayoutState.Snapshot?
+    private var layoutGestureID: UUID?
+    private var layoutGestureCaptured = false
+    var canUndoLayout: Bool { undoLayoutSnapshot != nil && localStateWritable && canSaveLayout }
+
+    func beginLayoutGesture(_ id: UUID) {
+        layoutGestureID = id
+        layoutGestureCaptured = false
+    }
+
+    func endLayoutGesture(_ id: UUID) {
+        if layoutGestureID == id { layoutGestureID = nil; layoutGestureCaptured = false }
+    }
+
+    private func layoutSnapshot(ids: Set<UUID>) -> NoteLayoutState.Snapshot {
+        NoteLayoutState.Snapshot(entries: activeNotes.filter { ids.contains($0.id) }.map {
+            NoteLayoutState.Entry(id: $0.id, frame: $0.frame, collapsed: isCollapsed($0.id))
+        }, arrangement: layoutState.arrangement)
+    }
+
+    func undoLastLayout(screens: [CGRect]? = nil) {
+        guard canUndoLayout, let snapshot = undoLayoutSnapshot else { return }
+        isArranging = true
+        defer { isArranging = false }
+        for entry in snapshot.entries {
+            guard !isTrashed(entry.id), let index = notes.firstIndex(where: { $0.id == entry.id }) else { continue }
+            notes[index].frame = restoredPresentation(id: entry.id, frame: entry.frame,
+                                                      screens: screens ?? NSScreen.screens.map(\.visibleFrame))
+            applyPresentation(entry.id)
+        }
+        save()
+        // Keep the retry available if persistence failed. Content and local presentation stay intact.
+        if !hasUnsavedChanges { undoLayoutSnapshot = nil }
+    }
+
+
     @discardableResult
     private func persistLayout(_ state: NoteLayoutState) -> Bool {
         guard canSave, contentEditingAllowed, canSaveLayout else { return false }
@@ -306,6 +343,8 @@ final class NoteStore: ObservableObject {
             defer: false
         )
         window.onTitleDoubleClick = { [weak self] in self?.toggleCollapse(id) }
+        window.onLayoutGestureBegan = { [weak self] in self?.beginLayoutGesture(id) }
+        window.onLayoutGestureEnded = { [weak self] in self?.endLayoutGesture(id) }
         window.setFrame(note.frame, display: false)
         window.title = windowTitle(for: note)
         window.titleVisibility = .hidden
@@ -351,7 +390,13 @@ final class NoteStore: ObservableObject {
         guard contentEditingAllowed else { return }
         guard !isArranging,
               let index = notes.firstIndex(where: { $0.id == id }) else { return }
-        notes[index].frame = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
+        let expanded = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
+        guard expanded != notes[index].frame else { return }
+        if layoutGestureID == id && !layoutGestureCaptured && localStateWritable && canSaveLayout {
+            undoLayoutSnapshot = layoutSnapshot(ids: [id])
+            layoutGestureCaptured = true
+        }
+        notes[index].frame = expanded
         save()
     }
 
@@ -409,14 +454,18 @@ final class NoteStore: ObservableObject {
         }
         // Durably store the before-image before touching any note frame or live window.
         guard persistLayout(state) else { return }
+        var geometryChanged = false
         isArranging = true
         defer { isArranging = false; save() }
         for (id, frame) in zip(ids, frames) {
             if let index = notes.firstIndex(where: { $0.id == id }) {
-                notes[index].frame = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
+                let expanded = layoutState.expandedFrame(id: id, rendered: frame, previous: notes[index].frame)
+                geometryChanged = geometryChanged || notes[index].frame != expanded
+                notes[index].frame = expanded
                 applyPresentation(id)
             }
         }
+        if geometryChanged { undoLayoutSnapshot = state.snapshot }
     }
 
     func restoreLayout(screens: [CGRect]? = nil) {
@@ -427,13 +476,18 @@ final class NoteStore: ObservableObject {
             if entry.collapsed { state.collapsed.insert(entry.id) } else { state.collapsed.remove(entry.id) }
         }
         guard persistLayout(state) else { return }
+        let before = layoutSnapshot(ids: Set(snapshot.entries.map(\.id)))
+        var geometryChanged = false
         isArranging = true
         defer { isArranging = false; save() }
         for entry in snapshot.entries {
             guard !isTrashed(entry.id), let index = notes.firstIndex(where: { $0.id == entry.id }) else { continue }
-            notes[index].frame = restoredPresentation(id: entry.id, frame: entry.frame, screens: screens ?? NSScreen.screens.map(\.visibleFrame))
+            let frame = restoredPresentation(id: entry.id, frame: entry.frame, screens: screens ?? NSScreen.screens.map(\.visibleFrame))
+            geometryChanged = geometryChanged || notes[index].frame != frame
+            notes[index].frame = frame
             applyPresentation(entry.id)
         }
+        if geometryChanged { undoLayoutSnapshot = before }
     }
 
     /// Used by normal termination; a failed write must not silently discard memory edits.
@@ -549,6 +603,8 @@ final class NoteWindowDelegate: NSObject, NSWindowDelegate {
         return false
     }
 
+    func windowWillStartLiveResize(_ notification: Notification) { store?.beginLayoutGesture(id) }
+    func windowDidEndLiveResize(_ notification: Notification) { store?.endLayoutGesture(id) }
     func windowDidMove(_ notification: Notification) { persistFrame(notification) }
     func windowDidResize(_ notification: Notification) { persistFrame(notification) }
 

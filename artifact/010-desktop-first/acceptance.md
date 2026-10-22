@@ -42,7 +42,7 @@
 | --- | --- |
 | 便签窗口 | Desktop / Floating / Canvas；Spaces、Mission Control、全屏、Stage Manager、多屏恢复 |
 | 便签操作 | 直接编辑、拖动、缩放、折叠、颜色、置顶、删除、隐藏；新建/搜索/排列快捷键。多选和批量删除作用范围仍待决定 |
-| 布局整理 | P0 Free/Grid/List/Compact/Restore；P1 Snap/Undo/Workspace；P2 Group 分组移动和统一折叠。P1/P2 是原路线图范围，当前未实施，不因列出而授权立即开发 |
+| 布局整理 | P0 Free/Grid/List/Compact/Restore；P1 Snap/Undo/Workspace；P2 Group 分组移动和统一折叠。P1/P2 是原路线图范围；会话布局撤销已获后续明确授权并实现，见下节。其余不因列出而授权立即开发 |
 | 数据可靠性 | 原模型 Note/Workspace/Placement/DeviceState，要求内容与布局分离。当前本地侧文件和兼容层不等于完整 Workspace 模型已经实现；工作区能力仍在 P1 |
 | 可选同步 | 可选 iCloud、离线编辑、冲突副本、双机同步、窗口布局本机优先。原设计 CloudKit 与当前目录同步实现路线有差异：目录方案已有实现及隔离证据，不能据此声称原 CloudKit 路线完成；也不强加 CloudKit 为目录方案验收前置条件。当前有效产品决定允许云目录路线，CloudKit 不另列必做功能；早期技术设计差异仅在此保留 |
 | 命令行操作 | 已授权的后续 CLI 切片 #16/#18/#19/#21；不倒填为原 PRD P0，最初用户原话完整来源仍待补证 |
@@ -58,3 +58,21 @@ Roadmap 的“待验收”不证明已安装或完成；按功能范围选择验
 - **命令行操作 → 本机删除恢复：已勾选。** 已验证的 0.3.81 包内 `istk` 在独立合成 profile 执行 `delete`、`restore`，随后以新进程 `get` 验证更新后的正文恢复；对应本任务 `daily-update-081/test-candidate.py` 与 `verification.json`。候选源码为 `aa30d0516ae5cde9fc5512641ff3151f23e97bcb`，ZIP SHA-256 为 `85dfd2f653aa07cf38ba7c95fb321348b9e680a7a320ae8887b00c2d75510301`。本项仅指 CLI 本机操作，不覆盖 UI 多选、同步删除或日用安装。
 - **命令增改查找：暂不勾选。** 包内已有 add/edit/get 实测，但该完整叶子包含 search，现有包内实测记录未覆盖搜索结果断言；不拿模型测试或部分命令通过替代全部范围。
 - **其余项：未勾选。** GUI、真实双机、安装仍有验收缺口；应用命令共存等不可只凭单位模型通过勾选。50 条便签是布局验收规模，保留在本验收表，不另作功能项。
+
+
+## P1 最近布局撤销（部分验证）
+
+本轮用户明确授权补“撤销最近一次布局操作”。已有 Restore 仅保存一键排列前持久快照，后续手动拖动/缩放不更新它；因此不能替代最近手动几何操作的撤销。本轮不开发边缘吸附、多选或工作区。
+
+实现约定：独立窗口菜单/Canvas 的 Window Layout 增加 `Undo Last Layout`（Command-Option-Z）；Board 的 Arrange Board 增加独立 `Undo Last Board Layout`。无历史时入口禁用。窗口一次拖动/缩放的连续 frame 更新合并为一个操作；排列与 Restore 同样生成一条会话历史。Board 的卡片移动、排列与恢复各生成一条历史。只恢复位置/大小，不回退正文、颜色、当前折叠、可见性、Trash 或后来新增的便签。
+
+复用 `NoteLayoutState.Snapshot` 与 `CanvasBoardState.Snapshot` 结构，仅增加会话内的一步历史，不新增持久化文件或第二份长期快照。保留旧 `layout.json` / `canvas-layout.json` 的 Restore 行为。重启后会话撤销清空且禁用；原有持久 Restore 仍可用。窗口撤销保存失败时保留待保存内容和撤销记录供重试；Board 提交失败时保持当前几何和历史不变。第二写入实例仍由原文件锁阻止。
+
+代码路径：`NoteStore.swift`（会话快照、手势合并与撤销）、`NoteDragHint.swift`（原生输入边界）、`NoteView.swift`（窗口入口）、`CanvasBoard.swift`（画布入口及原子提交）。本任务源码/测试及 PR 为权威证据；原 QA 负责真实窗口/手势验收，当前不启动 GUI、不操作日用版或真实便签。
+
+验证计划：新增 `Tests/LayoutUndoTests.swift` / `scripts/test-layout-undo.sh` 验证无历史、一次手势、几何恢复、正文/颜色/新增便签/折叠/隐藏保留、窗口和画布写失败、并发锁、重启历史清空及持久 Restore 不变；回归现有 50 条布局恢复与 Board 测试，完整编译和准确提交 CI。真实标题拖动、边缘缩放、菜单焦点及快捷键路由仍待安全 GUI 验收，Roadmap 保持未勾选。
+
+
+本机验证结果：新增会话撤销测试通过（连续手势合并、无历史、重复排列/Restore 不吞历史、保留内容/颜色/新增便签/当前折叠与隐藏、窗口及 Board 写失败/重试、Board 默认位置 before-image、并发实例拒写、重启清会话历史且保留持久 Restore）。独立 reviewer 修正了无变化操作覆盖历史及 Board 条件视图销毁历史两项问题，复审无剩余静态阻断。Board 状态现由稳定 CanvasView 持有；真实视图切换仍须 GUI 验收。首轮测试中的 Swift throwing-autoclosure 编译错误及全隐藏 fixture 未触发排列写入的断言问题已修正；未放宽功能断言。
+
+最终本机回归：现有 7 阶段布局/恢复、4 阶段 Canvas Board 测试及完整本地编译均通过；未启动应用。准确候选提交的 CI 结果以该 PR 为准，不能用旧 main CI 替代。
