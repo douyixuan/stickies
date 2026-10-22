@@ -49,6 +49,8 @@ struct CanvasView: View {
         store.activeNotes.filter { CanvasQuery.matches($0.text, query: query) }
     }
 
+    private var storageUnavailable: Bool { !store.localStateWritable && store.activeNotes.isEmpty }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -63,6 +65,8 @@ struct CanvasView: View {
                 } label: {
                     Label("New Note", systemImage: "plus")
                 }
+                .disabled(!store.localStateWritable)
+                .help("Create a note (⌘N)")
                 Spacer(minLength: 8)
                 Button("Settings…") { CloudSyncController.shared.show() }
                     .fixedSize()
@@ -87,12 +91,17 @@ struct CanvasView: View {
                 .font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 12).padding(.bottom, 8)
             if let error = store.persistenceError {
-                Text(error).font(.caption).foregroundStyle(.red)
-                    .padding(.horizontal, 12).accessibilityLabel(error)
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout).foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12).accessibilityLabel(error)
             }
             if let error = store.commandServiceError {
-                Text(error).font(.caption).foregroundStyle(.orange)
-                    .padding(.horizontal, 12).accessibilityLabel(error)
+                DisclosureGroup("Command-line access unavailable") {
+                    Text(error).font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .font(.caption).padding(.horizontal, 12).padding(.bottom, 8)
             }
             if let error = store.trashError {
                 Text(error).font(.caption).foregroundStyle(.red).padding(8)
@@ -103,9 +112,23 @@ struct CanvasView: View {
                     Text("\(results.count) of \(store.activeNotes.count) notes")
                         .font(.caption).foregroundStyle(.secondary).padding(12)
                     if results.isEmpty {
-                        ContentUnavailableView(query.isEmpty ? "No Notes" : "No Matching Notes",
-                                               systemImage: "note.text",
-                                               description: Text(query.isEmpty ? "Create a note to get started." : "Try different search words."))
+                        ContentUnavailableView {
+                            Label(storageUnavailable ? "Notes Unavailable" :
+                                    (query.isEmpty ? "No Notes" : "No Matching Notes"),
+                                  systemImage: storageUnavailable ? "exclamationmark.triangle" : "note.text")
+                        } description: {
+                            Text(storageUnavailable ? "Resolve the storage issue shown above before creating notes." :
+                                    (query.isEmpty ? "Create your first note, then write here or open its own window." : "Try different search words."))
+                        } actions: {
+                            if !query.isEmpty {
+                                Button("Clear Search") { query = "" }
+                            } else if store.localStateWritable {
+                                Button("New Note", systemImage: "plus") {
+                                    selection = store.createNote(showWindow: false)
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
                     } else if showBoard {
                         CanvasBoardView(selection: $selection, query: query, board: board)
                     } else {
@@ -162,6 +185,7 @@ struct CanvasView: View {
             }
         }
         .onChange(of: controller.newNoteRequest) { _, _ in
+            guard store.localStateWritable else { return }
             query = ""
             selection = store.createNote(showWindow: false)
         }

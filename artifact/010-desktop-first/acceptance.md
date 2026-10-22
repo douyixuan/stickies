@@ -127,3 +127,33 @@ A synthetic hard-linked profile reproduces the failure on f8fd28f. The fix permi
 The isolated app-store path covers load, the same create operation used by the New Note button, edit, save, and a new-process reload. It checks that the other link stays byte-identical and the strict CLI gate remains active. Existing lock/crash/retry tests also pass. This is not a rendered GUI click/editor acceptance. No live data or running app was changed. A replacement still requires a safe normal exit; the full GUI new-note flow remains pending.
 
 Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2 extension fields survive. The other link stays unchanged. All delivery recovery phases and 14 command-core tests pass. Independent static review found no data-safety blocker. Schema3 hard-linked profiles retain the strict startup gate and cannot accept unsaved edits. A valid isolated migrated profile verifies this boundary after automated review identified the need for an explicit startup check.
+
+## 2026-10-22 今晚流程接入结果
+
+对应同一功能项：[新建、编辑、保存与恢复](../../roadmap/note-lifecycle.md)。这是今晚既有计划的调整，不新增平行计划或状态台账。
+
+本轮实际完成：新增该闭环的需求来源、根叶子映射、用户流程、完成定义、分层验收标准和项目运行/锁/备份门槛；根 ROADMAP 的八个相关叶子链接到细化文件，层级和勾选保持不变。复核 0.3.91 用户失败、PR #27 修复主线、0.3.94 未安装及 Store/GUI 证据边界。已有回归与准确主线 CI 只作为既有证据引用，不计作今晚新增测试。
+
+今晚可独立完成范围为文件映射、链接检查、通用格式接入及文档提交审查。通用模板与检查入口待 Didadi 原任务/父任务提供后适配；不另造一套标准。真实 GUI 操作及安全替换不在当前许可内，本轮未执行，也不转交用户代测。对应根叶子仍未勾选。未来获准后由执行者按细化文件完成真实闭环并留证。
+
+文档发布与准确 CI 链接以本轮后续 PR 为准；此记录不把文件落地视为功能验收完成。
+
+今晚计划已按用户反馈调整为[五个具体用户目标](plan.md#2026-10-22-今晚功能执行调整)。核对结果：PR23–27均已合入，0.3.94包可复用；开放PR仅其他流程的PR4。未把既有实现/测试重新计入今晚新增成果。四项GUI闭环与分组产品决定的门槛分别列明；未以文档接入替代功能交付。
+
+
+### 2026-10-22 管理窗口状态设计与先行自验
+
+对应[同一闭环的设计门槛](../../roadmap/note-lifecycle.md#产品设计)。本轮实际查看用户 Library 图片 libfile_2a67550ab8948191805c377e6586e2aa，确认旧版 CLI 提示占据中央且存储故障表现成双空态。CanvasView 增加空库新建、无结果清空搜索、禁写故障态，存储错误直接展示，CLI 详情按需展开；不修改存储或锁。
+
+本机 `SDKROOT=.../MacOSX26.5.sdk bash scripts/build-local.sh` 编译通过，未运行 GUI。用户最新许可覆盖两个 App 的独立合成测试点击/输入/拖动/正常重启/测试窗口截图；当前工具清单没有原生 macOS GUI 控制工具，capture_screen_context 仅限活跃语音，不能替代。此处是能力阻塞，不再写成未获授权。真实视觉、焦点、窗口缩放和按钮闭环由我们在具备安全工具后先验，用户不是首轮测试员。日用退出状态未重新确认，本轮不安装。ROADMAP 不新增勾选。
+
+独立静态复审发现 Canvas 的 ⌘N 请求未与禁用按钮保持一致；已在同一 Canvas 请求入口补 localStateWritable 检查。全局其他窗口行为未改。复审不是 GUI 验收。
+
+
+### 2026-10-22 复用通用模板与离线门禁
+
+只读取得 Didadi 本地提交 ff0e7691e3ee2eacef6cd929094318bee1a1df2c；通用流程、模板、检查脚本及12项回归逐字节复用。原来源目录未修改。Stickies填写自身8个生命周期叶子、main/候选/安装版本及blocked/reopened状态；唯一历史豁免仅覆盖主线原有包内CLI“本机删除恢复”。根树保持56叶子、原勾选不变，通过 README 连接细化和验收。
+
+本地结构/关联/证据检查通过，12项离线门禁回归通过；严格 `--require-checkable note-lifecycle` 以 unresolved blockers or reopened defect 拒绝，符合未完成GUI自验及修复未安装状态。CI配置仅追加相同离线检查，未执行或触发远端新版CI。本轮不推送、不合入、不安装；远端PR28仍为8da2a4c，不能把其CI记为本地新接入的CI。
+
+PR28 ready 后复审补正：只读已加载便签的搜索无结果保持正常提示，Clear Search 不依赖写权限；仅新建受写入门禁约束。历史豁免的本地检查现在必须指定基线，缺省不再给出假通过；隔离 Git 回归覆盖已勾基线通过、未勾基线拒绝。该增强来自实际复审，已注明对通用源的局部差异，未修改 Didadi。

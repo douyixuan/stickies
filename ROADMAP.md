@@ -116,4 +116,4 @@
 - [ ] 保留原数据位置（待验收）
 - [ ] 新版日用安装（待验收）
 
-[验收记录](artifact/010-desktop-first/acceptance.md)
+[功能细化与验收](roadmap/README.md)
