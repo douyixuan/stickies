@@ -111,6 +111,11 @@ struct LocalTrashCommands: View {
 struct ArrangementCommands: View {
     @ObservedObject private var store = NoteStore.shared
     var body: some View {
+        Toggle("Snap to Screen Edges", isOn: Binding(
+            get: { store.snapToScreenEdges }, set: { store.setSnapToScreenEdges($0) }
+        ))
+        .disabled(!store.canChangeWindowPreferences)
+        .help("On drag release, snap within 12 points of the display's usable edges. Resizing stays free.")
         Button("Undo Last Layout") { store.undoLastLayout() }
             .keyboardShortcut("z", modifiers: [.command, .option])
             .disabled(!store.canUndoLayout)
