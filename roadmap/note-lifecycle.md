@@ -40,7 +40,7 @@
 
 ## 既有证据与缺陷回流
 
-- 准确主线 `deb042e` 的隔离包 **0.3.102** 已通过包内 CLI 的 26 次新进程调用与 12 项集成测试；具体哈希、结果和限制回链[原验收记录](../artifact/010-desktop-first/acceptance.md#2026-10-22-准确主线包内-cli-验收)。这只覆盖离线持久化与本机恢复子路径，日用仍为 0.3.91；GUI 闭环与安装状态、根树勾选不变。
+- 源码提交 `deb042e`（本次验证时的 main）的隔离包 **0.3.102** 已通过包内 CLI 的 26 次新进程调用与 12 项集成测试；具体哈希、结果和限制回链[原验收记录](../artifact/010-desktop-first/acceptance.md#2026-10-22-准确主线包内-cli-验收)。这只覆盖离线持久化与本机恢复子路径，日用仍为 0.3.91；GUI 闭环与安装状态、根树勾选不变。
 - 用户故障发生在已安装 `0.3.91`（`f8fd28f888572b02f22f207a8b92731bdabd918c`）。仅元数据确认 notes 文件链接数为 2；启动恢复拒绝后 Store 为空且禁写。GUI 未展示根本存储错误。第二链接来源未知；本任务 ZIP 备份没有创建硬链接。
 - [PR #27](https://github.com/douyixuan/stickies/pull/27) 修复该回归；独立复审后补了 v3 启动禁写保护。主线 `7f70349ec995225384e201d598be95804ba7889e` 的 [CI 成功](https://github.com/douyixuan/stickies/actions/runs/39765548245)。对应 `0.3.94` 包已验证，尚未安装；不能把候选当作用户正在使用的版本。
 - [DeliveryRecoveryTests](../Tests/DeliveryRecoveryTests.swift) 与[运行入口](../scripts/test-delivery-recovery.sh) 已覆盖 Store 初始化、加载、创建、编辑、保存、新进程读取、硬链接边界和失败/锁恢复。[CI 工作流](../.github/workflows/build.yml) 在打包前调用这些回归。
@@ -108,7 +108,7 @@
   ],
   "plan": "../artifact/010-desktop-first/plan.md",
   "versions": {
-    "main": "7f70349ec995225384e201d598be95804ba7889e",
+    "main": "deb042eeb464f289af1275e415b5d6a9244070f2",
     "candidate": "10a402f94a480c3958ea985fbdea199ad72d7ff9",
     "installed": "f8fd28f888572b02f22f207a8b92731bdabd918c",
     "online": null

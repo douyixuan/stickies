@@ -1,0 +1,215 @@
+{
+  "source": "deb042eeb464f289af1275e415b5d6a9244070f2",
+  "build": "0.3.102",
+  "version": {
+    "build": "0.3.102",
+    "commit": "deb042eeb464f289af1275e415b5d6a9244070f2",
+    "name": "istk",
+    "protocolVersion": 1,
+    "version": "0.3.0"
+  },
+  "archive": "iStickies2-0.3.0-deb042eeb464-universal2.zip",
+  "archiveSHA256": "0f6024ab229ff7477b464e610dd38efc3f47efd794396a35b3751dafcd4e1f30",
+  "binary": "payload/Contents/MacOS/istk",
+  "binarySHA256": "b16f8662da7b0bbbbd81627c00876038d027c1950f79c8acf13a53a3f6703ce0",
+  "architectures": [
+    "x86_64",
+    "arm64"
+  ],
+  "timeUTC": "2026-10-22T17:19:27.020193+00:00",
+  "steps": [
+    {
+      "command": "help",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "version",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "add",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "list",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "edit",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "search",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "search",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "delete",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "list",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "list",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "restore",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "list",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "edit",
+      "expectedExit": 64,
+      "actualExit": 64,
+      "newProcess": true
+    },
+    {
+      "command": "add",
+      "expectedExit": 64,
+      "actualExit": 64,
+      "newProcess": true
+    },
+    {
+      "command": "unknown-command",
+      "expectedExit": 64,
+      "actualExit": 64,
+      "newProcess": true
+    },
+    {
+      "command": "list",
+      "expectedExit": 75,
+      "actualExit": 75,
+      "newProcess": true
+    },
+    {
+      "command": "edit",
+      "expectedExit": 75,
+      "actualExit": 75,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "edit",
+      "expectedExit": 74,
+      "actualExit": 74,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "edit",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    },
+    {
+      "command": "get",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "newProcess": true
+    }
+  ],
+  "reusedTests": [
+    "test_atomic_write_permission_failure_preserves_content",
+    "test_crud_search_stdin_and_restore",
+    "test_failed_writes_and_invalid_data_do_not_report_success",
+    "test_help_version_no_profile",
+    "test_lock_blocks_reads_and_writes",
+    "test_recovery_journal_distinguishes_read_and_decode_errors",
+    "test_rejects_invalid_batch_without_partial_change",
+    "test_slow_stdin_is_read_until_eof",
+    "test_symlink_files_and_invalid_stdin_rejected",
+    "test_two_processes_serialize_or_report_busy",
+    "test_unreadable_regular_files_report_io_without_changes",
+    "test_v2_extensions_and_legacy_preserved"
+  ],
+  "reusedTestCount": 12,
+  "allPassed": true,
+  "finalSyntheticFileHashes": {
+    "command-results.json": "7d90b0fe2181eb273f94c60a9331f340b1e4080a1e39f659b916f65ab0d80a45",
+    "notes.json": "177a5fa44f7cd4596cd1300553ebf46c3d89ffb1a77712c202710d5b5147aa45",
+    "trash.json": "e42fe5f45f0c86ba4a103c7074ecd69fd980899e40375fcd30839c80c942d5f6"
+  },
+  "data": "temporary synthetic profile; removed after run",
+  "GUIStarted": false,
+  "realDataAccessed": false,
+  "PATHChanged": false,
+  "installed": false,
+  "limits": [
+    "native arm64 execution only; other architecture presence checked",
+    "running GUI transport and GUI clicks not exercised",
+    "no schema migration, cloud transport or power-loss validation"
+  ],
+  "redaction": "Only host-specific absolute paths replaced; original execution results retained.",
+  "runnerSHA256": "3dce73c35de94bc07dbaa37721a76101672b662c1098e351c5374f4ee1944c85",
+  "signatureVerification": {
+    "command": "codesign --verify --deep --strict payload",
+    "result": "passed before CLI execution (check=True in preserved runner)"
+  }
+}

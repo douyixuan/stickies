@@ -157,6 +157,7 @@ Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2
 本地结构/关联/证据检查通过，12项离线门禁回归通过；严格 `--require-checkable note-lifecycle` 以 unresolved blockers or reopened defect 拒绝，符合未完成GUI自验及修复未安装状态。CI配置仅追加相同离线检查，未执行或触发远端新版CI。本轮不推送、不合入、不安装；远端PR28仍为8da2a4c，不能把其CI记为本地新接入的CI。
 
 PR28 ready 后复审补正：只读已加载便签的搜索无结果保持正常提示，Clear Search 不依赖写权限；仅新建受写入门禁约束。历史豁免的本地检查现在必须指定基线，缺省不再给出假通过；隔离 Git 回归覆盖已勾基线通过、未勾基线拒绝。该增强来自实际复审，已注明对通用源的局部差异，未修改 Didadi。
+
 ## 2026-10-22 准确主线包内 CLI 验收
 
 源码 `deb042eeb464f289af1275e415b5d6a9244070f2`，版本 0.3.0 / build **0.3.102**，是隔离构建；日用仍为 **0.3.91**。没有安装、启动 GUI、修改 PATH 或访问真实便签。本轮只补证据，没有新增命令或产品修复。
@@ -168,6 +169,6 @@ PR28 ready 后复审补正：只读已加载便签的搜索无结果保持正常
 
 2026-10-22 17:19 UTC 完成 26 次独立进程调用和 12 项既有 CLI 集成测试，全部通过。覆盖 help/version 不创建资料、新建、列表/读取、中文多行 stdin 编辑、中文及忽略重音搜索、单张移入回收站和恢复、每次修改后新进程读回。参数错误退出 64、锁冲突 75、只读写失败 74；拒绝前后文件哈希一致，解除合成故障后编辑和读回成功。复用测试另覆盖并发、慢 stdin、损坏日志、符号链接拒绝、v2 扩展及 legacy 保留。测试资料为已清理的临时合成目录。
 
-签名与包校验通过；arm64 实际运行，x86_64 仅确认产物存在。原始证据为本任务 `cli-main-verification/verification.json`、`integration-tests.log` 和 `verify.py`；不公开含机器路径的原始日志。[准确源码 CI](https://github.com/douyixuan/stickies/actions/runs/39818362585) 成功，但以上打包后实测是独立本机证据，不能混称 CI 内运行。
+签名与包校验通过；arm64 实际运行，x86_64 仅确认产物存在。脱敏执行结果见[verification.json](evidence/cli-0.3.102/verification.json)、[集成日志](evidence/cli-0.3.102/integration-tests.log)及[原执行脚本](evidence/cli-0.3.102/verify.py)。脚本保留当时相邻源码/产物目录约定，仅作运行证据；脱敏 JSON 只替换机器绝对路径，不公开构建原始日志。[准确源码 CI](https://github.com/douyixuan/stickies/actions/runs/39818362585) 成功，但以上打包后实测是独立本机证据，不能混称 CI 内运行。
 
 对应[生命周期细化](../../roadmap/note-lifecycle.md)中的持久化与本机恢复子路径；使用方式见[CLI 文档](../../docs/CLI.md)。离线 CLI 证据不覆盖真实 GUI 点击、运行中 GUI 通道、双机同步、断电耐久性或日用安装；根 ROADMAP 勾选不变，不把既有命令重算为新增功能。
