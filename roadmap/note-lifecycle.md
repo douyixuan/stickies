@@ -84,7 +84,7 @@
 
 ## 验证与发布
 
-现有分层证据见上文与[验收记录](../artifact/010-desktop-first/acceptance.md)。本轮仅本地接入模板，不推送、合入或安装。PR28 的代码候选是 8da2a4c，当前待发布的模板接入不宣称已有远端 CI。设计状态为 partial，仅已查看修复前截图与源码；没有改后像素证据。完整生命周期验收仍 blocked，用户失败回流保持 reopened，直至实际重验与安全交付完成。
+现有分层证据见上文与[验收记录](../artifact/010-desktop-first/acceptance.md)。用户已重新授权本仓库审核、推送及合入；不安装或操作真实数据。PR28 的代码与门禁候选是 10a402f，以下元数据固定该被复审版本；随后证据文档提交不改变运行代码。最终分支及主线 CI 仍须以准确 SHA 核实。设计状态为 partial，仅已查看修复前截图与源码；没有改后像素证据。完整生命周期验收仍 blocked，用户失败回流保持 reopened，直至实际重验与安全交付完成。
 
 ## 检查元数据
 
@@ -108,14 +108,14 @@
   "plan": "../artifact/010-desktop-first/plan.md",
   "versions": {
     "main": "7f70349ec995225384e201d598be95804ba7889e",
-    "candidate": "8da2a4cafbe4e554f303cc678a534db35bda15ab",
+    "candidate": "10a402f94a480c3958ea985fbdea199ad72d7ff9",
     "installed": "f8fd28f888572b02f22f207a8b92731bdabd918c",
     "online": null
   },
   "target": "installed",
   "review": {
     "status": "passed",
-    "version": "8da2a4cafbe4e554f303cc678a534db35bda15ab",
+    "version": "10a402f94a480c3958ea985fbdea199ad72d7ff9",
     "evidence": "../artifact/010-desktop-first/acceptance.md"
   },
   "acceptance": {
@@ -139,7 +139,7 @@
     "required": true,
     "reference": "#产品设计",
     "status": "partial",
-    "version": "8da2a4cafbe4e554f303cc678a534db35bda15ab",
+    "version": "10a402f94a480c3958ea985fbdea199ad72d7ff9",
     "visual_evidence": null
   },
   "blockers": [
