@@ -86,6 +86,10 @@ struct CanvasView: View {
             Text("Manage notes without moving their independent windows.")
                 .font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 12).padding(.bottom, 8)
+            if let error = store.persistenceError {
+                Text(error).font(.caption).foregroundStyle(.red)
+                    .padding(.horizontal, 12).accessibilityLabel(error)
+            }
             if let error = store.commandServiceError {
                 Text(error).font(.caption).foregroundStyle(.orange)
                     .padding(.horizontal, 12).accessibilityLabel(error)

@@ -10,13 +10,67 @@ struct DeliveryRecoveryTests {
         let root = URL(fileURLWithPath: path, isDirectory: true)
         let file = root.appendingPathComponent("notes.json")
         let phase = CommandLine.arguments[1]
-        let fixture = Data("""
+        var fixture = Data("""
         [{"id":"\(id)","text":"original","color":2,"frame":[[100,200],[260,220]],"visible":true}]
         """.utf8)
+        if phase == "hardlink_v2" {
+            fixture = Data("""
+            {"schemaVersion":2,"contents":[{"id":"\(id)","text":"original","color":2}],"localStates":[{"id":"\(id)","state":{"frame":[[100,200],[260,220]],"visible":true}}],"extension":{"preserve":true}}
+            """.utf8)
+        }
+        if phase == "hardlink_v3" {
+            try fixture.write(to: file)
+            let migrationLock = open(root.appendingPathComponent("notes.lock").path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+            precondition(migrationLock >= 0 && flock(migrationLock, LOCK_EX | LOCK_NB) == 0)
+            try SegmentedCommandLedger.migrate(in: root)
+            flock(migrationLock, LOCK_UN)
+            close(migrationLock)
+            try FileManager.default.linkItem(at: file, to: root.appendingPathComponent("snapshot.json"))
+            do {
+                try SerializedNoteCommands.recover(in: root)
+                preconditionFailure("hardlinked schema3 must fail before segmented validation")
+            } catch SerializedNoteCommands.Failure.unsafeFile { }
+            let blocked = NoteStore.shared
+            precondition(blocked.commandRecoveryRequired && !blocked.localStateWritable)
+            precondition(blocked.createNote(showWindow: false) == nil)
+            print("PASS: hardlinked schema3 stays read-only at startup")
+            return
+        }
         if phase == "retry" || phase == "hold" { try fixture.write(to: file) }
         if phase == "corrupt" { try Data("{broken notes".utf8).write(to: file) }
         if phase == "future" { try Data("{\"schemaVersion\":999}".utf8).write(to: file) }
+        if phase == "hardlink" || phase == "hardlink_v2" {
+            try fixture.write(to: file)
+            try FileManager.default.linkItem(at: file, to: root.appendingPathComponent("snapshot.json"))
+        }
         let store = NoteStore.shared
+        if phase == "hardlink" || phase == "hardlink_v2" {
+            precondition(store.localStateWritable && !store.commandRecoveryRequired, "hard-linked notes must load without a pending journal")
+            precondition(store.note(id)?.text == "original")
+            do {
+                _ = try SerializedNoteCommands.checkedNotes(in: root)
+                preconditionFailure("CLI transaction must retain its strict hardlink gate")
+            } catch SerializedNoteCommands.Failure.unsafeFile { }
+            let created = store.createNote(showWindow: false)!
+            precondition(store.activeNotes.contains { $0.id == created })
+            store.updateText(created, "new note edited through store")
+            precondition(store.flushPendingChanges())
+            let snapshot = try Data(contentsOf: root.appendingPathComponent("snapshot.json"))
+            precondition(snapshot == fixture)
+            print("PASS: hardlink loaded, GUI action store created/edited/saved, snapshot unchanged")
+            return
+        }
+        if phase == "hardlink_reload" || phase == "hardlink_v2_reload" {
+            precondition(store.activeNotes.count == 2 && store.activeNotes.contains { $0.text == "new note edited through store" })
+            precondition(store.localStateWritable)
+            if phase == "hardlink_v2_reload" {
+                let saved = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: Any]
+                precondition(saved["schemaVersion"] as? Int == 2)
+                precondition((saved["extension"] as? [String: Bool]) == ["preserve": true])
+            }
+            print("PASS: hardlink new note survives process restart")
+            return
+        }
         verifyPaths(root)
         if phase == "retry" {
             let backup = root.appendingPathComponent("original.json")

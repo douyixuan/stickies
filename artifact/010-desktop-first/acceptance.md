@@ -117,3 +117,13 @@ Tests/DisplayRecoveryTests.swift 与 scripts/test-display-recovery.sh 已实测�
 独立静态复审无阻断，指出跨屏窗口虽仍可操作也可能被收回单屏；本实现沿用已有“整个渲染窗口位于某一屏幕可用区域”的恢复策略，不仅处理完全离屏窗口。已补跨两屏窗口用例并明确此边界，实际体验仍待 GUI 验收。
 
 最终本机结果：新增显示器恢复全部阶段（含跨屏用例）、Undo、Snap、Workspace 隔离回归和完整编译通过。准确提交 CI 记录于候选 PR；未执行 GUI 插拔验收。
+
+### 2026-10-22: New Note blocked by a hard-linked profile
+
+The installed 0.3.91 profile had a regular `notes.json` with link count 2 (metadata only). With no pending command journal, startup recovery rejected the file before loading notes. The store stayed empty and blocked creation. Canvas showed the secondary CLI warning but omitted the storage error.
+
+A synthetic hard-linked profile reproduces the failure on f8fd28f. The fix permits a read-only load of regular hard-linked notes only when there is no pending journal. GUI saves already replace the file atomically. CLI transactions and pending-journal recovery retain their single-link requirement. Canvas now displays the storage error.
+
+The isolated app-store path covers load, the same create operation used by the New Note button, edit, save, and a new-process reload. It checks that the other link stays byte-identical and the strict CLI gate remains active. Existing lock/crash/retry tests also pass. This is not a rendered GUI click/editor acceptance. No live data or running app was changed. A replacement still requires a safe normal exit; the full GUI new-note flow remains pending.
+
+Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2 extension fields survive. The other link stays unchanged. All delivery recovery phases and 14 command-core tests pass. Independent static review found no data-safety blocker. Schema3 hard-linked profiles retain the strict startup gate and cannot accept unsaved edits. A valid isolated migrated profile verifies this boundary after automated review identified the need for an explicit startup check.
