@@ -1,0 +1,17 @@
+test_atomic_write_permission_failure_preserves_content (packaged_cli_tests.CLIIntegration.test_atomic_write_permission_failure_preserves_content) ... ok
+test_crud_search_stdin_and_restore (packaged_cli_tests.CLIIntegration.test_crud_search_stdin_and_restore) ... ok
+test_failed_writes_and_invalid_data_do_not_report_success (packaged_cli_tests.CLIIntegration.test_failed_writes_and_invalid_data_do_not_report_success) ... ok
+test_help_version_no_profile (packaged_cli_tests.CLIIntegration.test_help_version_no_profile) ... ok
+test_lock_blocks_reads_and_writes (packaged_cli_tests.CLIIntegration.test_lock_blocks_reads_and_writes) ... ok
+test_recovery_journal_distinguishes_read_and_decode_errors (packaged_cli_tests.CLIIntegration.test_recovery_journal_distinguishes_read_and_decode_errors) ... ok
+test_rejects_invalid_batch_without_partial_change (packaged_cli_tests.CLIIntegration.test_rejects_invalid_batch_without_partial_change) ... ok
+test_slow_stdin_is_read_until_eof (packaged_cli_tests.CLIIntegration.test_slow_stdin_is_read_until_eof) ... ok
+test_symlink_files_and_invalid_stdin_rejected (packaged_cli_tests.CLIIntegration.test_symlink_files_and_invalid_stdin_rejected) ... ok
+test_two_processes_serialize_or_report_busy (packaged_cli_tests.CLIIntegration.test_two_processes_serialize_or_report_busy) ... ok
+test_unreadable_regular_files_report_io_without_changes (packaged_cli_tests.CLIIntegration.test_unreadable_regular_files_report_io_without_changes) ... ok
+test_v2_extensions_and_legacy_preserved (packaged_cli_tests.CLIIntegration.test_v2_extensions_and_legacy_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 1.124s
+
+OK
