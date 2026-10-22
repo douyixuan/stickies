@@ -143,8 +143,15 @@ Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2
 
 ### 2026-10-22 管理窗口状态设计与先行自验
 
-对应[同一闭环的设计门槛](../../roadmap/note-lifecycle.md#界面设计与交付自验门槛)。本轮实际查看用户 Library 图片 libfile_2a67550ab8948191805c377e6586e2aa，确认旧版 CLI 提示占据中央且存储故障表现成双空态。CanvasView 增加空库新建、无结果清空搜索、禁写故障态，存储错误直接展示，CLI 详情按需展开；不修改存储或锁。
+对应[同一闭环的设计门槛](../../roadmap/note-lifecycle.md#产品设计)。本轮实际查看用户 Library 图片 libfile_2a67550ab8948191805c377e6586e2aa，确认旧版 CLI 提示占据中央且存储故障表现成双空态。CanvasView 增加空库新建、无结果清空搜索、禁写故障态，存储错误直接展示，CLI 详情按需展开；不修改存储或锁。
 
 本机 `SDKROOT=.../MacOSX26.5.sdk bash scripts/build-local.sh` 编译通过，未运行 GUI。用户最新许可覆盖两个 App 的独立合成测试点击/输入/拖动/正常重启/测试窗口截图；当前工具清单没有原生 macOS GUI 控制工具，capture_screen_context 仅限活跃语音，不能替代。此处是能力阻塞，不再写成未获授权。真实视觉、焦点、窗口缩放和按钮闭环由我们在具备安全工具后先验，用户不是首轮测试员。日用退出状态未重新确认，本轮不安装。ROADMAP 不新增勾选。
 
 独立静态复审发现 Canvas 的 ⌘N 请求未与禁用按钮保持一致；已在同一 Canvas 请求入口补 localStateWritable 检查。全局其他窗口行为未改。复审不是 GUI 验收。
+
+
+### 2026-10-22 复用通用模板与离线门禁
+
+只读取得 Didadi 本地提交 ff0e7691e3ee2eacef6cd929094318bee1a1df2c；通用流程、模板、检查脚本及12项回归逐字节复用。原来源目录未修改。Stickies填写自身8个生命周期叶子、main/候选/安装版本及blocked/reopened状态；唯一历史豁免仅覆盖主线原有包内CLI“本机删除恢复”。根树保持56叶子、原勾选不变，通过 README 连接细化和验收。
+
+本地结构/关联/证据检查通过，12项离线门禁回归通过；严格 `--require-checkable note-lifecycle` 以 unresolved blockers or reopened defect 拒绝，符合未完成GUI自验及修复未安装状态。CI配置仅追加相同离线检查，未执行或触发远端新版CI。本轮不推送、不合入、不安装；远端PR28仍为8da2a4c，不能把其CI记为本地新接入的CI。

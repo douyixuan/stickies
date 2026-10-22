@@ -1,0 +1,10 @@
+{
+  "roadmap": "ROADMAP.md",
+  "features": "roadmap",
+  "legacy_checked": {
+    "数据可靠性/命令行操作/本机删除恢复": {
+      "evidence": "artifact/010-desktop-first/acceptance.md",
+      "scope": "仅保留接入基线已勾选的包内 CLI 隔离删除恢复证据；不覆盖 GUI 或当前新候选"
+    }
+  }
+}
