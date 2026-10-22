@@ -103,6 +103,9 @@ enum SerializedNoteCommands {
             // Without a journal, legacy parse failures belong to the normal read-only
             // loader. Only an identifiable schema-3 inventory needs this recovery gate.
             if let notes, let raw = try? LosslessJSON.parse(notes), case .scalar("3")? = raw.object?["schemaVersion"] {
+                // Segmented saves require a single-link manifest. Do not publish a
+                // writable store that would reject every subsequent save.
+                _ = try checkedNotes(in: directory)
                 try SegmentedCommandLedger.validate(notes, in: directory)
             }
             return

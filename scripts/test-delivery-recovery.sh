@@ -14,11 +14,12 @@ cleanup() {
     rm -rf "$TEST_DATA"
 }
 trap cleanup EXIT
-mkdir "$TEST_DATA/hardlink_v2" "$TEST_DATA/hardlink" "$TEST_DATA/retry" "$TEST_DATA/crash" "$TEST_DATA/corrupt" "$TEST_DATA/future"
+mkdir "$TEST_DATA/hardlink_v3" "$TEST_DATA/hardlink_v2" "$TEST_DATA/hardlink" "$TEST_DATA/retry" "$TEST_DATA/crash" "$TEST_DATA/corrupt" "$TEST_DATA/future"
 STICKIES_DATA_DIR="$TEST_DATA/hardlink" build/delivery-recovery-tests hardlink
 STICKIES_DATA_DIR="$TEST_DATA/hardlink" build/delivery-recovery-tests hardlink_reload
 STICKIES_DATA_DIR="$TEST_DATA/hardlink_v2" build/delivery-recovery-tests hardlink_v2
 STICKIES_DATA_DIR="$TEST_DATA/hardlink_v2" build/delivery-recovery-tests hardlink_v2_reload
+STICKIES_DATA_DIR="$TEST_DATA/hardlink_v3" build/delivery-recovery-tests hardlink_v3
 STICKIES_DATA_DIR="$TEST_DATA/retry" build/delivery-recovery-tests retry
 STICKIES_DATA_DIR="$TEST_DATA/retry" build/delivery-recovery-tests verify_retry
 STICKIES_DATA_DIR="$TEST_DATA/corrupt" build/delivery-recovery-tests corrupt

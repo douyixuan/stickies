@@ -18,6 +18,24 @@ struct DeliveryRecoveryTests {
             {"schemaVersion":2,"contents":[{"id":"\(id)","text":"original","color":2}],"localStates":[{"id":"\(id)","state":{"frame":[[100,200],[260,220]],"visible":true}}],"extension":{"preserve":true}}
             """.utf8)
         }
+        if phase == "hardlink_v3" {
+            try fixture.write(to: file)
+            let migrationLock = open(root.appendingPathComponent("notes.lock").path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+            precondition(migrationLock >= 0 && flock(migrationLock, LOCK_EX | LOCK_NB) == 0)
+            try SegmentedCommandLedger.migrate(in: root)
+            flock(migrationLock, LOCK_UN)
+            close(migrationLock)
+            try FileManager.default.linkItem(at: file, to: root.appendingPathComponent("snapshot.json"))
+            do {
+                try SerializedNoteCommands.recover(in: root)
+                preconditionFailure("hardlinked schema3 must fail before segmented validation")
+            } catch SerializedNoteCommands.Failure.unsafeFile { }
+            let blocked = NoteStore.shared
+            precondition(blocked.commandRecoveryRequired && !blocked.localStateWritable)
+            precondition(blocked.createNote(showWindow: false) == nil)
+            print("PASS: hardlinked schema3 stays read-only at startup")
+            return
+        }
         if phase == "retry" || phase == "hold" { try fixture.write(to: file) }
         if phase == "corrupt" { try Data("{broken notes".utf8).write(to: file) }
         if phase == "future" { try Data("{\"schemaVersion\":999}".utf8).write(to: file) }
