@@ -74,5 +74,9 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationDidChangeScreenParameters(_ notification: Notification) {
+        NoteStore.shared.recoverDisplayLayout()
+    }
+
     func applicationWillTerminate(_ notification: Notification) { NoteStore.shared.stopCommandService() }
 }

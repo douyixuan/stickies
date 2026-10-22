@@ -514,6 +514,33 @@ final class NoteStore: ObservableObject {
         save()
     }
 
+    /// Recover visible notes when displays or their usable areas change during this session.
+    /// Automatic recovery does not replace user Undo, arrangement Restore or named layouts.
+    func recoverDisplayLayout(screens: [CGRect]? = nil) {
+        guard localStateWritable, canSaveLayout else { return }
+        let screens = (screens ?? NSScreen.screens.map(\.visibleFrame)).filter {
+            [$0.minX, $0.minY, $0.maxX, $0.maxY, $0.width, $0.height].allSatisfy(\.isFinite)
+                && $0.width > 0 && $0.height > 0
+        }.sorted { $0.minX == $1.minX ? $0.minY < $1.minY : $0.minX < $1.minX }
+        // Display reconfiguration can briefly expose no usable screens. Do not move anything then.
+        guard !screens.isEmpty else { return }
+        isArranging = true
+        defer { isArranging = false }
+        var changed = false
+        for index in notes.indices where notes[index].visible && !isTrashed(notes[index].id) {
+            let id = notes[index].id
+            let rendered = layoutState.renderedFrame(id: id, expanded: notes[index].frame)
+            guard !screens.contains(where: { $0.contains(rendered) }) else { continue }
+            let restored = restoredPresentation(id: id, frame: notes[index].frame, screens: screens)
+            guard restored != notes[index].frame else { continue }
+            notes[index].frame = restored
+            changed = true
+            applyPresentation(id)
+        }
+        // A repeated notification can retry an earlier failed save without replacing history.
+        if changed || hasUnsavedChanges { save() }
+    }
+
     private func restoredPresentation(id: UUID, frame: CGRect, screens: [CGRect]) -> CGRect {
         let rendered = layoutState.renderedFrame(id: id, expanded: frame)
         let restored = LayoutEngine.restore(rendered, screens: screens,

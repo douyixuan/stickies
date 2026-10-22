@@ -104,3 +104,16 @@ Snap 候选基于独立撤销候选 PR #23；不将 #23 或文档 PR #22 的状�
 实现位置：WorkspaceLayouts.swift（数据验证和管理窗口）、NoteStore.swift（加载/保存/切换及 Undo）、NoteView.swift（共享入口）。Tests/WorkspaceTests.swift 与 scripts/test-workspaces.sh 覆盖创建/重命名/覆盖/切换、名称验证、正文/颜色/新便签/隐藏/折叠保留、重启、目录写失败/重试、notes 写失败/重试/Undo、第二实例拒写、损坏及未来版本保留、失效/Trash ID、移除屏幕和无屏幕，以及 Restore/Snap 兼容。独立静态复审无阻断；管理窗口的真实选择/输入/按钮流程与多屏 GUI 仍待原 QA，ROADMAP 不勾选。未启动 GUI、未读取真实便签、未退出或安装日用版。
 
 本机最终验证：工作区全阶段隔离测试通过，包含修复存储后 create/save/rename 重试成功、切换失败后保留内容及 Undo；Undo 和 Snap 全套隔离回归、完整本地编译均通过。最终独立静态复审无阻断。准确提交的 CI 结果记录于候选 PR，不以旧提交的 CI 替代。
+
+
+## 运行中显示器变化恢复（部分验证）
+
+对照原“多屏恢复/不丢窗”需求发现实际缺口：现有边界恢复只发生在 show、Restore、Undo 或工作区切换；没有运行中显示器配置变化入口。此次按本机 AppKit SDK 的 NSApplicationDelegate.applicationDidChangeScreenParameters 接入现有恢复逻辑，不创造新功能范围，也不接管原 GUI QA。
+
+通知到达后只调整不再完整位于有效屏幕可用区域的可见、未进 Trash 便签；已可达窗口保持位置。空/无效屏幕列表暂不移动，负坐标与可用区域缩小复用已有边界约束；折叠按标题可见 frame 恢复，保留展开高度。隐藏/Trash、正文、颜色、Snap 偏好、命名工作区、排列 Restore 文件不变，不覆盖会话 Undo。自动恢复不运行 Snap，也不展示隐藏窗口。保存失败保留内存和退出保护，下一次通知可重试持久化。
+
+Tests/DisplayRecoveryTests.swift 与 scripts/test-display-recovery.sh 已实测屏幕移除、可用区域变小、空屏幕延迟、重复无变化、折叠尺寸、正文及四类侧文件保持、Undo、跨进程重启、写失败重试及第二写入实例拒写。本机完整编译通过。实际 AppKit 通知时机、系统自动搬窗与此恢复的交互、多屏插拔和 GUI 仍待安全 QA，ROADMAP 的多屏位置恢复不勾选。分组成员、UI 多选删除、安装与双机同步仍保留原阻塞，不因此扩大范围。
+
+独立静态复审无阻断，指出跨屏窗口虽仍可操作也可能被收回单屏；本实现沿用已有“整个渲染窗口位于某一屏幕可用区域”的恢复策略，不仅处理完全离屏窗口。已补跨两屏窗口用例并明确此边界，实际体验仍待 GUI 验收。
+
+最终本机结果：新增显示器恢复全部阶段（含跨屏用例）、Undo、Snap、Workspace 隔离回归和完整编译通过。准确提交 CI 记录于候选 PR；未执行 GUI 插拔验收。
