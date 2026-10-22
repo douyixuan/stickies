@@ -139,3 +139,12 @@ Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2
 文档发布与准确 CI 链接以本轮后续 PR 为准；此记录不把文件落地视为功能验收完成。
 
 今晚计划已按用户反馈调整为[五个具体用户目标](plan.md#2026-10-22-今晚功能执行调整)。核对结果：PR23–27均已合入，0.3.94包可复用；开放PR仅其他流程的PR4。未把既有实现/测试重新计入今晚新增成果。四项GUI闭环与分组产品决定的门槛分别列明；未以文档接入替代功能交付。
+
+
+### 2026-10-22 管理窗口状态设计与先行自验
+
+对应[同一闭环的设计门槛](../../roadmap/note-lifecycle.md#界面设计与交付自验门槛)。本轮实际查看用户 Library 图片 libfile_2a67550ab8948191805c377e6586e2aa，确认旧版 CLI 提示占据中央且存储故障表现成双空态。CanvasView 增加空库新建、无结果清空搜索、禁写故障态，存储错误直接展示，CLI 详情按需展开；不修改存储或锁。
+
+本机 `SDKROOT=.../MacOSX26.5.sdk bash scripts/build-local.sh` 编译通过，未运行 GUI。用户最新许可覆盖两个 App 的独立合成测试点击/输入/拖动/正常重启/测试窗口截图；当前工具清单没有原生 macOS GUI 控制工具，capture_screen_context 仅限活跃语音，不能替代。此处是能力阻塞，不再写成未获授权。真实视觉、焦点、窗口缩放和按钮闭环由我们在具备安全工具后先验，用户不是首轮测试员。日用退出状态未重新确认，本轮不安装。ROADMAP 不新增勾选。
+
+独立静态复审发现 Canvas 的 ⌘N 请求未与禁用按钮保持一致；已在同一 Canvas 请求入口补 localStateWritable 检查。全局其他窗口行为未改。复审不是 GUI 验收。
