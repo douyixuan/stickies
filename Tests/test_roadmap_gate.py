@@ -1,6 +1,7 @@
 """Gate regression: prevent false completion and broken handoff, without transport."""
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from scripts.check_roadmap import validate, historical_allowances
@@ -106,7 +107,20 @@ class RoadmapGateTests(unittest.TestCase):
         value = json.loads(config.read_text())
         value['legacy_checked']['Module/Feature/Outcome'] = {'scope': 'original narrow runtime evidence only', 'evidence': 'evidence.md#observed'}
         config.write_text(json.dumps(value))
-        self.assertEqual(validate(self.root), (1, 0))
+        with self.assertRaisesRegex(ValueError, 'require --baseline-ref'):
+            validate(self.root)
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        subprocess.run(['git', '-C', str(self.root), 'add', 'ROADMAP.md'], check=True)
+        subprocess.run(['git', '-C', str(self.root), '-c', 'user.name=Gate Test', '-c', 'user.email=gate@example.invalid', 'commit', '-qm', 'baseline'], check=True)
+        self.assertEqual(validate(self.root, baseline='HEAD'), (1, 0))
+        # A baseline with an unchecked leaf cannot justify a later historical allowance.
+        roadmap = self.root / 'ROADMAP.md'
+        roadmap.write_text(roadmap.read_text().replace('[x]', '[ ]'))
+        subprocess.run(['git', '-C', str(self.root), 'add', 'ROADMAP.md'], check=True)
+        subprocess.run(['git', '-C', str(self.root), '-c', 'user.name=Gate Test', '-c', 'user.email=gate@example.invalid', 'commit', '-qm', 'unchecked baseline'], check=True)
+        self.check_leaf()
+        with self.assertRaisesRegex(ValueError, 'previously checked'):
+            validate(self.root, baseline='HEAD')
 
 
 if __name__ == '__main__':

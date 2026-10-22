@@ -96,6 +96,8 @@ def validate(root, require=None, baseline=None):
     config = json.loads((root / 'roadmap/_checks.json').read_text())
     roadmap = root / config['roadmap']
     leaves = tree(roadmap)
+    if config.get('legacy_checked') and not baseline:
+        raise ValueError('Historical allowances require --baseline-ref; do not skip baseline verification')
     if baseline:
         previous = subprocess.run(['git', '-C', str(root), 'show', f'{baseline}:{config["roadmap"]}'], capture_output=True, text=True, check=True).stdout
         # Parse the same tree without creating or executing a linked artifact.

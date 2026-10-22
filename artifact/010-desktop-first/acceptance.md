@@ -155,3 +155,5 @@ Validation: legacy and v2 hard-link fixtures pass creation/edit/save/restart; v2
 只读取得 Didadi 本地提交 ff0e7691e3ee2eacef6cd929094318bee1a1df2c；通用流程、模板、检查脚本及12项回归逐字节复用。原来源目录未修改。Stickies填写自身8个生命周期叶子、main/候选/安装版本及blocked/reopened状态；唯一历史豁免仅覆盖主线原有包内CLI“本机删除恢复”。根树保持56叶子、原勾选不变，通过 README 连接细化和验收。
 
 本地结构/关联/证据检查通过，12项离线门禁回归通过；严格 `--require-checkable note-lifecycle` 以 unresolved blockers or reopened defect 拒绝，符合未完成GUI自验及修复未安装状态。CI配置仅追加相同离线检查，未执行或触发远端新版CI。本轮不推送、不合入、不安装；远端PR28仍为8da2a4c，不能把其CI记为本地新接入的CI。
+
+PR28 ready 后复审补正：只读已加载便签的搜索无结果保持正常提示，Clear Search 不依赖写权限；仅新建受写入门禁约束。历史豁免的本地检查现在必须指定基线，缺省不再给出假通过；隔离 Git 回归覆盖已勾基线通过、未勾基线拒绝。该增强来自实际复审，已注明对通用源的局部差异，未修改 Didadi。

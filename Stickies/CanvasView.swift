@@ -49,6 +49,8 @@ struct CanvasView: View {
         store.activeNotes.filter { CanvasQuery.matches($0.text, query: query) }
     }
 
+    private var storageUnavailable: Bool { !store.localStateWritable && store.activeNotes.isEmpty }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -111,22 +113,20 @@ struct CanvasView: View {
                         .font(.caption).foregroundStyle(.secondary).padding(12)
                     if results.isEmpty {
                         ContentUnavailableView {
-                            Label(!store.localStateWritable ? "Notes Unavailable" :
+                            Label(storageUnavailable ? "Notes Unavailable" :
                                     (query.isEmpty ? "No Notes" : "No Matching Notes"),
-                                  systemImage: !store.localStateWritable ? "exclamationmark.triangle" : "note.text")
+                                  systemImage: storageUnavailable ? "exclamationmark.triangle" : "note.text")
                         } description: {
-                            Text(!store.localStateWritable ? "Resolve the storage issue shown above before creating notes." :
+                            Text(storageUnavailable ? "Resolve the storage issue shown above before creating notes." :
                                     (query.isEmpty ? "Create your first note, then write here or open its own window." : "Try different search words."))
                         } actions: {
-                            if store.localStateWritable {
-                                if query.isEmpty {
-                                    Button("New Note", systemImage: "plus") {
-                                        selection = store.createNote(showWindow: false)
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                } else {
-                                    Button("Clear Search") { query = "" }
+                            if !query.isEmpty {
+                                Button("Clear Search") { query = "" }
+                            } else if store.localStateWritable {
+                                Button("New Note", systemImage: "plus") {
+                                    selection = store.createNote(showWindow: false)
                                 }
+                                .buttonStyle(.borderedProminent)
                             }
                         }
                     } else if showBoard {
