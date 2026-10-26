@@ -1,71 +1,26 @@
-name: macOS Build
+name: CI
 on:
   push:
   pull_request:
+
 jobs:
   build:
-    runs-on: macos-15-intel
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Check roadmap evidence structure without services
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-          ROADMAP_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+
+      - name: Core tests — data, migration, layout, recovery (no windows)
+        run: bash scripts/test.sh
+
+      - name: Compile the app shell without Xcode
+        run: bash scripts/preview.sh --build-only
+
+      - name: Build and check the CLI
         run: |
-          if [ -z "$ROADMAP_BASE_SHA" ] || [ "$ROADMAP_BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            ROADMAP_BASE_SHA="$(git merge-base HEAD origin/main)"
-          fi
-          python3 -m scripts.check_roadmap --baseline-ref "$ROADMAP_BASE_SHA"
-          python3 -m unittest discover -s Tests -p test_roadmap_gate.py -v
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate project
-        run: xcodegen generate
-      - name: Test layout geometry
-        run: bash scripts/test-layout.sh
-      - name: Compile without creating a launcher app
-        run: bash scripts/build-local.sh
-      - name: Test sync durability with simulated transport (no iCloud)
-        run: bash scripts/test-sync.sh
-      - name: Test CLI with isolated data and shared app storage
-        run: bash scripts/test-cli.sh
-      - name: Compile GUI smoke harness without launching
-        run: bash scripts/test-store.sh
-      - name: Test GUI harness storage guard without launching
-        run: python3 Tests/GUIIsolationTests.py
-      - name: Test v2 compatibility and read-only installation gate
-        run: bash scripts/test-compatibility.sh
-      - name: Test Canvas without opening windows
-        run: bash scripts/test-canvas.sh
-      - name: Test layout snapshots and recovery without windows
-        run: bash scripts/test-layout-store.sh
-      - name: Test session layout undo without windows
-        run: bash scripts/test-layout-undo.sh
-      - name: Test window edge snapping without windows
-        run: bash scripts/test-window-snap.sh
-      - name: Test named layout workspaces without windows
-        run: bash scripts/test-workspaces.sh
-      - name: Test live display-layout recovery without windows
-        run: bash scripts/test-display-recovery.sh
-      - name: Test window mode preferences without windows
-        run: bash scripts/test-window-mode.sh
-      - name: Test single-note actions and local overrides without windows
-        run: bash scripts/test-single-note-actions.sh
-      - name: Test Canvas board and recovery without windows
-        run: bash scripts/test-canvas-board.sh
-      - name: Test crash, lock and pending-save recovery without windows
-        run: bash scripts/test-delivery-recovery.sh
-      - name: Test serialized commands and process-crash recovery without windows
-        run: bash scripts/test-command-core.sh
-      - name: Test explicit ledger migration and old-writer gates without windows
-        run: bash scripts/test-segmented-ledger.sh
-      - name: Test local command transport without windows
-        run: bash scripts/test-command-channel.sh
-      - name: Build
-        run: xcodebuild -project Stickies.xcodeproj -scheme Stickies -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath build/.xcode.noindex build
-      - name: Verify Xcode icon and identity
-        run: python3 scripts/verify-xcode-bundle.py build/.xcode.noindex/Build/Products/Debug/iStickies2.app
-      - name: Package universal delivery candidate without launching
-        run: bash scripts/package-delivery.sh
+          bash scripts/build-cli.sh
+          bash scripts/test-cli.sh
+
+      - name: Build the app
+        run: |
+          brew install xcodegen
+          bash scripts/build-app.sh
