@@ -145,6 +145,23 @@ func testReadOnlyProfiles() {
     Check.equal(second.notes.count, 1, "a second instance still sees the notes")
     Check.that(second.createNote() == nil, "a second instance refuses to write")
 
+    // A failed undo keeps its undo point, so it can be retried once writing works again.
+    let undoDir = Scratch.directory("undo-retry")
+    let undoStore = NoteStore(directory: undoDir, takingLock: false)
+    let moved = undoStore.createNote()!
+    let start = undoStore.note(moved)!.frame
+    undoStore.markUndoPoint(ids: [moved])
+    undoStore.setFrame(moved, expanded: CGRect(x: 600, y: 600, width: 260, height: 220))
+    let layoutPath = undoDir.appendingPathComponent("layout.json")
+    try? FileManager.default.removeItem(at: layoutPath)
+    try? FileManager.default.createDirectory(at: layoutPath, withIntermediateDirectories: false)
+    Check.that(!undoStore.undoLayout(), "undo reports a failed layout write")
+    Check.that(undoStore.canUndoLayout, "a failed undo keeps its undo point")
+    try? FileManager.default.removeItem(at: layoutPath)
+    Check.that(undoStore.undoLayout(), "the undo succeeds once the write works again")
+    Check.equal(undoStore.note(moved)?.frame, start, "the retried undo puts the note back")
+    Check.that(!undoStore.canUndoLayout, "a successful undo spends its undo point")
+
     // A trash file we cannot read must not let trashed notes pass as active.
     let badTrash = Scratch.directory("bad-trash")
     let withTrash = NoteStore(directory: badTrash, takingLock: false)

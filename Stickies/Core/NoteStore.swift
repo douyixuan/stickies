@@ -278,9 +278,11 @@ final class NoteStore: ObservableObject {
     /// (the usable display areas). With no screens, frames are restored exactly.
     @discardableResult
     func undoLayout(screens: [CGRect] = []) -> Bool {
-        guard let snapshot = undoSnapshot else { return false }
+        // Spend the undo point only once it has applied, so a failed write can be retried.
+        guard let snapshot = undoSnapshot,
+              apply(change(restoring: snapshot, screens: screens, recordUndo: false)) else { return false }
         undoSnapshot = nil
-        return apply(change(restoring: snapshot, screens: screens, recordUndo: false))
+        return true
     }
 
     /// Restores the frames an arrangement replaced. The restore point is kept, so this
