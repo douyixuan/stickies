@@ -37,35 +37,39 @@ Each step is one observation. If a step fails, that is the bug report — note w
 18. Relaunch after an arrangement, then ⌘⌥R. The old positions still come back.
 19. Drag a note to within a few points of a screen edge and release. It snaps flush.
 20. Turn **Snap to Screen Edges** off and repeat. It does not snap.
+21. Turn snapping back on and resize a note by dragging its corner to within a few
+    points of a screen edge. On release the note does not jump.
+22. With a tall note open, ⌘⌥3 (Compact), then double-click its title. It unfolds at
+    its old height, not the minimum.
 
 ## Layer
 
-21. Set **Desktop — Behind Apps**. Notes sit above the wallpaper and behind other apps.
+23. Set **Desktop — Behind Apps**. Notes sit above the wallpaper and behind other apps.
     Click one: while iStickies2 is active it comes forward and you can edit it, and it
     drops back behind other apps when you switch away. A note you hid stays hidden.
-22. Switch Spaces. Desktop notes are on the new Space too.
-23. Set **Floating — Keep on Top**. Notes stay above a full-screen-ish window.
-24. Set one note to **Keep This Note on Top** while the default is ordinary. Only that
+24. Switch Spaces. Desktop notes are on the new Space too.
+25. Set **Floating — Keep on Top**. Notes stay above a full-screen-ish window.
+26. Set one note to **Keep This Note on Top** while the default is ordinary. Only that
     note floats. **Use Global Window Default** gives it back.
-25. Open Mission Control and Stage Manager with notes in each layer. Nothing vanishes
+27. Open Mission Control and Stage Manager with notes in each layer. Nothing vanishes
     permanently or lands off screen.
 
 ## Trash
 
-26. **Move to Trash on This Mac** on one note. Its window closes.
-27. **Restore from Trash on This Mac**. The note comes back with its text, color,
+28. **Move to Trash on This Mac** on one note. Its window closes.
+29. **Restore from Trash on This Mac**. The note comes back with its text, color,
     size and position.
 
 ## Displays
 
-28. With a second display attached, move a note onto it, then disconnect it. The note
+30. With a second display attached, move a note onto it, then disconnect it. The note
     reappears fully on the remaining display.
-29. Reattach the display. Nothing is lost or stacked off screen.
+31. Reattach the display. Nothing is lost or stacked off screen.
 
 ## Data safety
 
-30. Launch a second copy while the first runs. It says it will not save, and the first
+32. Launch a second copy while the first runs. It says it will not save, and the first
     copy keeps working.
-31. Quit normally with unsaved edits in a note. Nothing is lost.
-32. Corrupt `build/preview-data/notes.json` by hand and launch. The app says it is not
+33. Quit normally with unsaved edits in a note. Nothing is lost.
+34. Corrupt `build/preview-data/notes.json` by hand and launch. The app says it is not
     saving, and the file is unchanged when you quit.

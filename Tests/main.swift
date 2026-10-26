@@ -6,6 +6,7 @@ testPreferencesMigration()
 testNoteStoreContent()
 testTrash()
 testLayout()
+testArrangeKeepsFoldedHeights()
 testReadOnlyProfiles()
 
 Scratch.cleanUp()

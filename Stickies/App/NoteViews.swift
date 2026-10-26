@@ -9,7 +9,10 @@ struct NoteBodyView: View {
         if let note = store.note(noteID) {
             TextEditor(text: Binding(
                 get: { store.note(noteID)?.text ?? "" },
-                set: { store.setText(noteID, $0) }
+                set: {
+                    store.setText(noteID, $0)
+                    AppServices.shared.windows.refreshTitle(noteID)
+                }
             ))
             .disabled(!store.isWritable)
             .font(.system(size: 15))

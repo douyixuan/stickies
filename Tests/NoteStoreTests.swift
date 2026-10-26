@@ -160,3 +160,36 @@ func testReadOnlyProfiles() {
     Check.equal(NoteStore(directory: blocked, takingLock: false).note(id)?.text, "this cannot be saved",
                 "the recovered write is on disk")
 }
+
+func testArrangeKeepsFoldedHeights() {
+    let store = NoteStore(directory: Scratch.directory("arrange"), takingLock: false)
+    let id = store.createNote()!
+    let tall = CGRect(x: 100, y: 100, width: 260, height: 400)
+    store.setFrame(id, expanded: tall)
+    let area = CGRect(x: 0, y: 0, width: 1440, height: 900)
+
+    // An expanded note entering Compact folds but remembers how tall it was.
+    Check.that(store.arrange(.compact, in: area), "compact applies")
+    Check.that(store.isCollapsed(id), "compact folds the note")
+    Check.equal(store.note(id)?.frame.height, 400, "a note entering Compact keeps its expanded height")
+    let folded = store.layout.renderedFrame(id: id, expanded: store.note(id)!.frame)
+    Check.equal(folded.height, LayoutState.collapsedHeight, "the folded note is one title bar high")
+    Check.that(area.contains(folded), "the folded title bar is on screen")
+
+    // A folded note entering Grid unfolds at the grid's size.
+    Check.that(store.arrange(.grid, in: area), "grid applies")
+    Check.that(!store.isCollapsed(id), "grid unfolds the note")
+    Check.equal(store.note(id)?.frame.height, StickyNote.defaultSize.height,
+                "a folded note entering Grid takes the grid's height")
+    Check.that(area.contains(store.note(id)!.frame), "the grid frame is on screen")
+
+    // Undo returns to the folded Compact state, with the height intact.
+    Check.that(store.undoLayout(), "undo applies")
+    Check.that(store.isCollapsed(id), "undo folds the note again")
+    Check.equal(store.note(id)?.frame.height, 400, "undo keeps the remembered height")
+
+    Check.that(store.arrange(.free, in: area), "free layout applies")
+    Check.equal(store.layout.arrangement, .free, "free layout is recorded")
+    Check.that(!NoteStore(directory: Scratch.directory("empty-arrange"), takingLock: false).arrange(.grid, in: area),
+               "arranging no visible notes does nothing")
+}

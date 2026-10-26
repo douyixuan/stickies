@@ -11,6 +11,8 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
     private var applyingFrames: Set<UUID> = []
     /// Undo points already taken during the in-flight mouse gesture.
     private var gestureCaptured: Set<UUID> = []
+    /// Notes resized during the in-flight gesture. Edge snapping is for moves only.
+    private var gestureResized: Set<UUID> = []
 
     init(store: NoteStore) {
         self.store = store
@@ -80,7 +82,7 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
                                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
                                 backing: .buffered, defer: false)
         window.onTitleDoubleClick = { [weak self] in self?.toggleCollapse(id) }
-        window.onGestureBegan = { [weak self] in self?.gestureCaptured.remove(id) }
+        window.onGestureBegan = { [weak self] in self?.beginGesture(id) }
         window.onGestureEnded = { [weak self] in self?.endGesture(id) }
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -160,6 +162,12 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
         }
     }
 
+    /// The native title follows the first line as you type, without touching geometry.
+    func refreshTitle(_ id: UUID) {
+        guard let note = store.note(id) else { return }
+        windows[id]?.title = note.title
+    }
+
     func applyAllPresentations() {
         for id in windows.keys { applyPresentation(id) }
     }
@@ -187,27 +195,9 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
 
     // MARK: Arranging
 
-    func arrange(_ strategy: Arrangement, in bounds: CGRect? = nil) {
-        if strategy == .free {
-            store.apply(NoteStore.LayoutChange(arrangement: .free, recordUndo: false))
-            return
-        }
-        let ids = store.visibleNotes.map(\.id)
-        guard !ids.isEmpty else { return }
-        let area = bounds ?? NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1200, height: 800)
-        let frames = LayoutEngine.arrange(count: ids.count, in: area, strategy: strategy)
-        guard frames.count == ids.count else { return }
-
-        var collapsed = store.layout.collapsed
-        for id in ids {
-            if strategy == .compact { collapsed.insert(id) } else { collapsed.remove(id) }
-        }
-        var change = NoteStore.LayoutChange(collapsed: collapsed, arrangement: strategy)
-        change.frames = Dictionary(uniqueKeysWithValues: zip(ids, frames).map { id, frame in
-            (id, store.layout.expandedFrame(id: id, rendered: frame, previous: store.note(id)?.frame ?? frame))
-        })
-        change.recordRestorePoint = true
-        guard store.apply(change) else { return }
+    func arrange(_ strategy: Arrangement) {
+        let area = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1200, height: 800)
+        guard store.arrange(strategy, in: area) else { return }
         applyAllPresentations()
     }
 
@@ -254,16 +244,23 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
             store.markUndoPoint(ids: [id])
             gestureCaptured.insert(id)
         }
+        if expanded.size != note.frame.size { gestureResized.insert(id) }
         store.setFrame(id, expanded: expanded)
     }
 
-    /// On mouse-up, a moved (not resized) note may snap to the display's usable edges.
+    private func beginGesture(_ id: UUID) {
+        gestureCaptured.remove(id)
+        gestureResized.remove(id)
+    }
+
+    /// On mouse-up, a moved note may snap to the display's usable edges. A resized one never
+    /// does: snapping it would drag the opposite edge along and undo the resize.
     private func endGesture(_ id: UUID) {
-        defer { gestureCaptured.remove(id) }
-        guard gestureCaptured.contains(id), store.preferences.snapToScreenEdges,
+        defer { beginGesture(id) }
+        guard gestureCaptured.contains(id), !gestureResized.contains(id), store.preferences.snapToScreenEdges,
               let window = windows[id], let note = store.note(id) else { return }
         let snapped = LayoutEngine.snapToScreenEdges(window.frame, screens: screens)
-        guard snapped != window.frame, snapped.size == window.frame.size else { return }
+        guard snapped != window.frame else { return }
         store.setFrame(id, expanded: store.layout.expandedFrame(id: id, rendered: snapped, previous: note.frame))
         applyPresentation(id)
     }

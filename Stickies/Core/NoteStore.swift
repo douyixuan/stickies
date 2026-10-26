@@ -241,6 +241,30 @@ final class NoteStore: ObservableObject {
         return true
     }
 
+    /// Lays out every visible note inside `area`. Compact folds them; Grid and List unfold them.
+    /// The frames it replaces become both the restore point and the session undo point.
+    @discardableResult
+    func arrange(_ strategy: Arrangement, in area: CGRect) -> Bool {
+        if strategy == .free { return apply(LayoutChange(arrangement: .free, recordUndo: false)) }
+        let ids = visibleNotes.map(\.id)
+        let frames = LayoutEngine.arrange(count: ids.count, in: area, strategy: strategy)
+        guard !ids.isEmpty, frames.count == ids.count else { return false }
+
+        var destination = layout
+        for id in ids {
+            if strategy == .compact { destination.collapsed.insert(id) } else { destination.collapsed.remove(id) }
+        }
+        var change = LayoutChange(collapsed: destination.collapsed, arrangement: strategy, recordRestorePoint: true)
+        for (id, rendered) in zip(ids, frames) {
+            // Convert with the folded state the note is moving to, not the one it has now:
+            // a note entering Compact keeps its expanded height, and a folded note
+            // entering Grid or List takes the arrangement's height.
+            change.frames[id] = destination.expandedFrame(id: id, rendered: rendered,
+                                                          previous: note(id)?.frame ?? rendered)
+        }
+        return apply(change)
+    }
+
     /// Captures the current geometry of `ids` so a drag or resize can be taken back.
     func markUndoPoint(ids: Set<UUID>) {
         guard isWritable else { return }
