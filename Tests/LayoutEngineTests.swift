@@ -61,4 +61,22 @@ func testLayoutEngine() {
     Check.equal(folded.maxY, expanded.maxY, "folding keeps the top edge in place")
     Check.equal(layout.expandedFrame(id: id, rendered: folded, previous: expanded), expanded,
                 "unfolding restores the expanded height")
+
+    // A folded note is kept on screen by its title bar, not by its remembered height.
+    let display = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let nearBottom = CGRect(x: 100, y: -300, width: 260, height: 400)
+    Check.equal(layout.restoredFrame(id: id, expanded: nearBottom, screens: [display]), nearBottom,
+                "a folded note whose title bar is on screen is not moved")
+    let lost = CGRect(x: 5000, y: 5000, width: 260, height: 400)
+    let found = layout.restoredFrame(id: id, expanded: lost, screens: [display])
+    Check.that(display.contains(layout.renderedFrame(id: id, expanded: found)),
+               "a folded note off every display comes back by its title bar")
+    Check.equal(found.height, 400, "bringing a folded note back keeps its remembered height")
+    let short = CGRect(x: 0, y: 0, width: 1440, height: 300)
+    Check.equal(layout.restoredFrame(id: id, expanded: CGRect(x: 100, y: 0, width: 260, height: 600),
+                                     screens: [short]).height, 600,
+                "a shorter display does not shrink a folded note's remembered height")
+    let open = CGRect(x: 100, y: -300, width: 260, height: 400)
+    Check.that(display.contains(LayoutState().restoredFrame(id: id, expanded: open, screens: [display])),
+               "an unfolded note is kept fully on screen")
 }

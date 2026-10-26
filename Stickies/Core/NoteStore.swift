@@ -14,6 +14,9 @@ final class NoteStore: ObservableObject {
     /// Non-nil when this run must not write at all: another instance owns the directory,
     /// or a file on disk could not be read and is preserved untouched.
     @Published private(set) var readOnlyReason: String? = nil
+    /// Non-nil when part of the profile could not be read, so what is in memory is incomplete.
+    /// A profile that is only locked by another instance is fully read and leaves this nil.
+    @Published private(set) var loadError: String? = nil
     /// The most recent failed write. Cleared by the next successful one.
     @Published private(set) var lastError: String? = nil
     /// True when memory holds note edits that are not on disk.
@@ -71,8 +74,8 @@ final class NoteStore: ObservableObject {
                 trashedIDs = file.ids
             }
         } catch {
-            readOnlyReason = "The \(reading) file could not be read and is preserved as-is: "
-                + error.localizedDescription + " This window will not save."
+            loadError = "The \(reading) file could not be read: " + error.localizedDescription
+            readOnlyReason = (loadError ?? "") + " It is preserved as-is, and this window will not save."
         }
     }
 
@@ -271,33 +274,36 @@ final class NoteStore: ObservableObject {
         undoSnapshot = snapshot(of: ids)
     }
 
-    /// Puts the notes back where the last layout change found them.
-    /// `clamping` pulls each frame onto an available display; the core never looks at screens.
+    /// Puts the notes back where the last layout change found them, pulled onto `screens`
+    /// (the usable display areas). With no screens, frames are restored exactly.
     @discardableResult
-    func undoLayout(clamping: (CGRect) -> CGRect = { $0 }) -> Bool {
+    func undoLayout(screens: [CGRect] = []) -> Bool {
         guard let snapshot = undoSnapshot else { return false }
         undoSnapshot = nil
-        return apply(change(restoring: snapshot, clamping: clamping, recordUndo: false))
+        return apply(change(restoring: snapshot, screens: screens, recordUndo: false))
     }
 
     /// Restores the frames an arrangement replaced. The restore point is kept, so this
     /// still works after a relaunch and can be used more than once.
     @discardableResult
-    func restorePreviousLayout(clamping: (CGRect) -> CGRect = { $0 }) -> Bool {
+    func restorePreviousLayout(screens: [CGRect] = []) -> Bool {
         guard let snapshot = layout.snapshot else { return false }
-        return apply(change(restoring: snapshot, clamping: clamping, recordUndo: true))
+        return apply(change(restoring: snapshot, screens: screens, recordUndo: true))
     }
 
-    private func change(restoring snapshot: LayoutState.Snapshot,
-                        clamping: (CGRect) -> CGRect,
+    private func change(restoring snapshot: LayoutState.Snapshot, screens: [CGRect],
                         recordUndo: Bool) -> LayoutChange {
-        var collapsed = layout.collapsed
-        var frames: [UUID: CGRect] = [:]
-        for entry in snapshot.entries where !isTrashed(entry.id) && note(entry.id) != nil {
-            frames[entry.id] = clamping(entry.frame)
-            if entry.collapsed { collapsed.insert(entry.id) } else { collapsed.remove(entry.id) }
+        let entries = snapshot.entries.filter { !isTrashed($0.id) && note($0.id) != nil }
+        var destination = layout
+        for entry in entries {
+            if entry.collapsed { destination.collapsed.insert(entry.id) } else { destination.collapsed.remove(entry.id) }
         }
-        return LayoutChange(frames: frames, collapsed: collapsed, arrangement: snapshot.arrangement,
+        // Clamp with the folded state each note is returning to.
+        var frames: [UUID: CGRect] = [:]
+        for entry in entries {
+            frames[entry.id] = destination.restoredFrame(id: entry.id, expanded: entry.frame, screens: screens)
+        }
+        return LayoutChange(frames: frames, collapsed: destination.collapsed, arrangement: snapshot.arrangement,
                             recordUndo: recordUndo)
     }
 

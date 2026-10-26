@@ -21,9 +21,9 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
 
     private var screens: [CGRect] { NSScreen.screens.map(\.visibleFrame) }
 
-    private func onScreen(_ frame: CGRect, collapsed: Bool) -> CGRect {
-        LayoutEngine.restore(frame, screens: screens,
-                             minimumHeight: collapsed ? LayoutState.collapsedHeight : StickyNote.minimumHeight)
+    /// Where a note should be so that what is drawn of it is on a live display.
+    private func onScreen(_ id: UUID, expanded frame: CGRect) -> CGRect {
+        store.layout.restoredFrame(id: id, expanded: frame, screens: screens)
     }
 
     // MARK: Launch
@@ -76,7 +76,7 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
         }
 
         // A note saved on a display that is gone comes back onto an available one.
-        store.setFrame(id, expanded: onScreen(note.frame, collapsed: store.isCollapsed(id)))
+        store.setFrame(id, expanded: onScreen(id, expanded: note.frame))
 
         let window = NoteWindow(contentRect: store.note(id)?.frame ?? note.frame,
                                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
@@ -187,8 +187,8 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
         let collapsing = !store.isCollapsed(id)
         var collapsed = store.layout.collapsed
         if collapsing { collapsed.insert(id) } else { collapsed.remove(id) }
-        // Unfolding may need to pull a note back onto a display it was folded away from.
-        let frame = collapsing ? note.frame : onScreen(note.frame, collapsed: false)
+        // Unfolding may need to pull the whole note back onto a display it was folded away from.
+        let frame = collapsing ? note.frame : LayoutEngine.restore(note.frame, screens: screens)
         store.apply(NoteStore.LayoutChange(frames: [id: frame], collapsed: collapsed))
         applyPresentation(id)
     }
@@ -202,12 +202,12 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
     }
 
     func undoLayout() {
-        guard store.undoLayout(clamping: { [weak self] in self?.onScreen($0, collapsed: false) ?? $0 }) else { return }
+        guard store.undoLayout(screens: screens) else { return }
         applyAllPresentations()
     }
 
     func restorePreviousLayout() {
-        guard store.restorePreviousLayout(clamping: { [weak self] in self?.onScreen($0, collapsed: false) ?? $0 }) else { return }
+        guard store.restorePreviousLayout(screens: screens) else { return }
         applyAllPresentations()
     }
 
@@ -217,7 +217,7 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
         guard !available.isEmpty else { return }
         var frames: [UUID: CGRect] = [:]
         for note in store.visibleNotes {
-            let restored = onScreen(note.frame, collapsed: store.isCollapsed(note.id))
+            let restored = onScreen(note.id, expanded: note.frame)
             if restored != note.frame { frames[note.id] = restored }
         }
         guard !frames.isEmpty else { return }

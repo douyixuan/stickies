@@ -108,11 +108,10 @@ func testLayout() {
     let afterRestart = NoteStore(directory: directory, takingLock: false)
     Check.that(afterRestart.isCollapsed(first), "folding survives a restart")
 
-    // A clamp keeps restored frames reachable without the core knowing about screens.
-    Check.that(afterRestart.restorePreviousLayout(clamping: { _ in CGRect(x: 1, y: 1, width: 200, height: 200) }),
-               "restore accepts a clamp")
-    Check.equal(afterRestart.note(first)?.frame, CGRect(x: 1, y: 1, width: 200, height: 200),
-                "the clamp decides the final frame")
+    // Restoring onto a display the old frames are not on pulls them onto it.
+    let elsewhere = CGRect(x: 3000, y: 3000, width: 1200, height: 800)
+    Check.that(afterRestart.restorePreviousLayout(screens: [elsewhere]), "restore applies with displays given")
+    Check.that(elsewhere.contains(afterRestart.note(first)!.frame), "restored frames land on a live display")
 }
 
 func testReadOnlyProfiles() {
@@ -124,6 +123,7 @@ func testReadOnlyProfiles() {
     let store = NoteStore(directory: corrupt, takingLock: false)
     Check.that(!store.isWritable, "a corrupt profile is read-only")
     Check.that(store.readOnlyReason != nil, "the reason is reported")
+    Check.that(store.loadError != nil, "a corrupt profile reports that what it holds is incomplete")
     Check.that(store.createNote() == nil, "a read-only profile refuses new notes")
     store.showAll()
     Check.equal(try? Data(contentsOf: notesURL), garbage, "the unreadable file is left exactly as it was")
@@ -138,9 +138,22 @@ func testReadOnlyProfiles() {
     let shared = Scratch.directory("lock")
     let owner = NoteStore(directory: shared, takingLock: true)
     Check.that(owner.isWritable, "the first instance owns the directory")
+    _ = owner.createNote()
     let second = NoteStore(directory: shared, takingLock: true)
     Check.that(!second.isWritable, "a second instance is read-only")
+    Check.that(second.loadError == nil, "a profile that is only locked is still fully read")
+    Check.equal(second.notes.count, 1, "a second instance still sees the notes")
     Check.that(second.createNote() == nil, "a second instance refuses to write")
+
+    // A trash file we cannot read must not let trashed notes pass as active.
+    let badTrash = Scratch.directory("bad-trash")
+    let withTrash = NoteStore(directory: badTrash, takingLock: false)
+    let trashed = withTrash.createNote()!
+    withTrash.moveToTrash(trashed)
+    try? Data("not a trash file".utf8).write(to: badTrash.appendingPathComponent("trash.json"))
+    let reread = NoteStore(directory: badTrash, takingLock: false)
+    Check.that(reread.loadError != nil, "an unreadable trash file is reported as an incomplete load")
+    Check.that(!reread.isWritable, "an unreadable trash file makes the profile read-only")
 
     // A failing write keeps the edit in memory and says so.
     let blocked = Scratch.directory("blocked")

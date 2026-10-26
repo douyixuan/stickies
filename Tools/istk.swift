@@ -43,6 +43,9 @@ struct Istk {
 
         guard let directory else { fail(64, "every data command needs --dir <notes-directory>") }
         let store = NoteStore(directory: URL(fileURLWithPath: directory, isDirectory: true))
+        // An unreadable profile fails every command: an empty list would be a lie.
+        // A profile that is only locked by the app is fully read, so reads still work.
+        if let error = store.loadError { fail(69, error) }
         if let reason = store.readOnlyReason, command == "add" { fail(69, reason) }
 
         switch command {

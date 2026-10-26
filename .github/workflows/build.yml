@@ -15,8 +15,10 @@ jobs:
       - name: Compile the app shell without Xcode
         run: bash scripts/preview.sh --build-only
 
-      - name: Build the CLI
-        run: bash scripts/build-cli.sh
+      - name: Build and check the CLI
+        run: |
+          bash scripts/build-cli.sh
+          bash scripts/test-cli.sh
 
       - name: Build the app
         run: |

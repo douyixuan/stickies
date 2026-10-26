@@ -47,8 +47,9 @@ build/bin/istk --dir ~/Library/Application\ Support/Stickies list
 ```
 
 `list`, `search <query>`, `get <id>` and `add [text]`, all JSON. It takes the same
-exclusive lock the app does, so it refuses to write while the app is open rather than
-racing it.
+exclusive lock the app does, so it reads while the app is open but refuses to write
+rather than racing it. A profile it cannot fully read fails every command instead of
+answering with what it happened to load.
 
 ## How it is put together
 

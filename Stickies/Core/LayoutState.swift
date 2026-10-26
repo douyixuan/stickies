@@ -36,6 +36,16 @@ struct LayoutState: Codable, Equatable {
                       width: rendered.width, height: previous.height)
     }
 
+    /// Pulls a note back onto a live display by what is actually drawn: a folded note is
+    /// clamped by its title bar, so its remembered expanded height may hang off screen and
+    /// is never shortened by a smaller display.
+    func restoredFrame(id: UUID, expanded: CGRect, screens: [CGRect]) -> CGRect {
+        let folded = collapsed.contains(id)
+        let restored = LayoutEngine.restore(renderedFrame(id: id, expanded: expanded), screens: screens,
+                                            minimumHeight: folded ? Self.collapsedHeight : StickyNote.minimumHeight)
+        return expandedFrame(id: id, rendered: restored, previous: expanded)
+    }
+
     func validate() throws {
         guard schemaVersion == 1 else { throw NoteFile.Failure.unsupportedVersion }
         guard let entries = snapshot?.entries else { return }
