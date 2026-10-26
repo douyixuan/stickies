@@ -13,6 +13,10 @@ extension NoteWindowMode {
         self == .desktop ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : []
     }
 
+    func presentationLevel(applicationActive: Bool) -> NSWindow.Level {
+        liftsToOrdinaryLevel(applicationActive: applicationActive) ? .normal : level
+    }
+
     var menuTitle: String {
         switch self {
         case .standard: return "Ordinary Windows"

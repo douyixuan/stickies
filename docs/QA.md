@@ -41,6 +41,8 @@ Each step is one observation. If a step fails, that is the bug report — note w
 ## Layer
 
 21. Set **Desktop — Behind Apps**. Notes sit above the wallpaper and behind other apps.
+    Click one: while iStickies2 is active it comes forward and you can edit it, and it
+    drops back behind other apps when you switch away. A note you hid stays hidden.
 22. Switch Spaces. Desktop notes are on the new Space too.
 23. Set **Floating — Keep on Top**. Notes stay above a full-screen-ish window.
 24. Set one note to **Keep This Note on Top** while the default is ordinary. Only that

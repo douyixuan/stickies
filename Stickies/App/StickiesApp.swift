@@ -83,4 +83,12 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
     func applicationDidChangeScreenParameters(_ notification: Notification) {
         services.windows.recoverDisplayLayout()
     }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        services.windows.refreshActivation(true)
+    }
+
+    func applicationDidResignActive(_ notification: Notification) {
+        services.windows.refreshActivation(false)
+    }
 }

@@ -3,6 +3,14 @@ import Foundation
 /// How note windows sit relative to other apps. Device-local, never synced.
 enum NoteWindowMode: String, Codable, CaseIterable {
     case standard, desktop, floating
+
+    /// A desktop note sits behind every app, which also puts it behind the click that
+    /// would select it. While iStickies2 itself is active it comes up to the ordinary
+    /// level so it can be reached, and drops back when you switch away.
+    /// Presentation only: activation never touches content, frames or preferences.
+    func liftsToOrdinaryLevel(applicationActive: Bool) -> Bool {
+        self == .desktop && applicationActive
+    }
 }
 
 /// Device-local settings in `preferences.json`. Decoding accepts the 0.2 and 0.3 files.

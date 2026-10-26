@@ -144,7 +144,7 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
         let mode = store.windowMode(for: id)
         window.title = note.title
         window.backgroundColor = NotePalette.color(note.color)
-        window.level = mode.level
+        window.level = mode.presentationLevel(applicationActive: NSApplication.shared.isActive)
         window.collectionBehavior = mode.collectionBehavior
         window.minSize = NSSize(width: StickyNote.minimumWidth,
                                 height: collapsed ? LayoutState.collapsedHeight : StickyNote.minimumHeight)
@@ -162,6 +162,14 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
 
     func applyAllPresentations() {
         for id in windows.keys { applyPresentation(id) }
+    }
+
+    /// Window levels only, on activation and deactivation. Nothing is shown, hidden,
+    /// reordered or saved: a note you hid stays hidden when you come back to the app.
+    func refreshActivation(_ active: Bool) {
+        for (id, window) in windows {
+            window.level = store.windowMode(for: id).presentationLevel(applicationActive: active)
+        }
     }
 
     // MARK: Folding

@@ -84,6 +84,18 @@ func testPreferencesMigration() {
     Check.that(preferences.hasOverride(id), "the override is reported")
     Check.equal(preferences.mode(for: UUID()), .standard, "other notes keep the default")
 
+    // A desktop note has to be reachable while the app itself is active.
+    Check.that(NoteWindowMode.desktop.liftsToOrdinaryLevel(applicationActive: true),
+               "an active app lifts desktop notes to the ordinary level")
+    Check.that(!NoteWindowMode.desktop.liftsToOrdinaryLevel(applicationActive: false),
+               "an inactive app puts desktop notes back behind other apps")
+    for active in [true, false, true, false] {
+        Check.that(!NoteWindowMode.standard.liftsToOrdinaryLevel(applicationActive: active),
+                   "ordinary windows are unaffected by activation")
+        Check.that(!NoteWindowMode.floating.liftsToOrdinaryLevel(applicationActive: active),
+                   "floating windows are unaffected by activation")
+    }
+
     // keepOnTop is read-only input and is not written back.
     let encoded = try? JSONEncoder().encode(preferences)
     let round = encoded.flatMap { try? JSONDecoder().decode(Preferences.self, from: $0) }
