@@ -32,6 +32,11 @@ final class NoteStore: ObservableObject {
     private var preferencesURL: URL { directory.appendingPathComponent("preferences.json") }
     private var trashURL: URL { directory.appendingPathComponent("trash.json") }
 
+    /// 0.3 wrote this before each command-line change and removed it once the change was
+    /// complete. One left behind holds an edit the files do not have yet, and only 0.3
+    /// knows how to finish it safely.
+    static let legacyJournalName = "command-journal.json"
+
     private struct TrashFile: Codable {
         var version = 1
         var ids: Set<UUID> = []
@@ -52,6 +57,12 @@ final class NoteStore: ObservableObject {
             }
         } else {
             lock = nil
+        }
+
+        if FileManager.default.fileExists(atPath: directory.appendingPathComponent(Self.legacyJournalName).path) {
+            loadError = "An unfinished command from iStickies2 0.3 is waiting in \(Self.legacyJournalName). "
+                + "Open iStickies2 0.3 once to finish it, then relaunch."
+            readOnlyReason = (loadError ?? "") + " Until then this window will not save."
         }
 
         // Read whole or not at all: a file we cannot parse stops the load and blocks writing,

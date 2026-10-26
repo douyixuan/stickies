@@ -67,6 +67,8 @@ Two rules keep the data safe, both enforced in one place:
 - **A file we cannot read is never half-written.** Anything unparseable — corrupt, or
   from a newer version — makes the whole run read-only and says so in the menu and on
   the note. Older `notes.json` files (0.1, 0.2 and 0.3) are read and migrated forward.
+  The one exception is a 0.3 command-line change that was interrupted halfway: its
+  `command-journal.json` blocks writing until 0.3 is opened once to finish it.
 
 A layout change writes `layout.json` before it moves anything, so the frames it replaced
 are on disk before the first window moves and **Restore Previous Layout** still works if

@@ -162,6 +162,18 @@ func testReadOnlyProfiles() {
     Check.equal(undoStore.note(moved)?.frame, start, "the retried undo puts the note back")
     Check.that(!undoStore.canUndoLayout, "a successful undo spends its undo point")
 
+    // An unfinished 0.3 command holds an edit the files do not have: never write over it.
+    let journaled = Scratch.directory("journal")
+    let before = NoteStore(directory: journaled, takingLock: false)
+    let pending = before.createNote()!
+    before.setText(pending, "before the command")
+    try? Data("{}".utf8).write(to: journaled.appendingPathComponent(NoteStore.legacyJournalName))
+    let upgraded = NoteStore(directory: journaled, takingLock: false)
+    Check.that(!upgraded.isWritable, "a pending 0.3 command journal makes the profile read-only")
+    Check.that(upgraded.loadError != nil, "a pending 0.3 command journal is reported as an incomplete load")
+    Check.equal(upgraded.note(pending)?.text, "before the command", "the notes on disk are still shown")
+    Check.that(upgraded.createNote() == nil, "nothing is written while the journal is pending")
+
     // A trash file we cannot read must not let trashed notes pass as active.
     let badTrash = Scratch.directory("bad-trash")
     let withTrash = NoteStore(directory: badTrash, takingLock: false)

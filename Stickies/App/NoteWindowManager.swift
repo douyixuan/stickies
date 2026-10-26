@@ -67,6 +67,9 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
     func show(_ id: UUID) {
         guard !store.isTrashed(id), let note = store.note(id) else { return }
         store.setVisible(id, true)
+        // A note left on a display that is gone comes back onto a live one. This covers a
+        // hidden note's cached window too: display recovery skips notes that are hidden.
+        store.setFrame(id, expanded: onScreen(id, expanded: note.frame))
 
         if let window = windows[id] {
             applyPresentation(id)
@@ -74,9 +77,6 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
             window.makeKeyAndOrderFront(nil)
             return
         }
-
-        // A note saved on a display that is gone comes back onto an available one.
-        store.setFrame(id, expanded: onScreen(id, expanded: note.frame))
 
         let window = NoteWindow(contentRect: store.note(id)?.frame ?? note.frame,
                                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
