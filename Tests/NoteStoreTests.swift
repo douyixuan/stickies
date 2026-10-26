@@ -235,3 +235,49 @@ func testArrangeKeepsFoldedHeights() {
     Check.that(!NoteStore(directory: Scratch.directory("empty-arrange"), takingLock: false).arrange(.grid, in: area),
                "arranging no visible notes does nothing")
 }
+
+
+func testReadOnlyWindowRecovery() throws {
+    for journal in [false, true] {
+        for folded in [false, true] {
+            let directory = Scratch.directory("readonly-window")
+            let seed = NoteStore(directory: directory, takingLock: false)
+            let id = seed.createNote()!
+            let saved = CGRect(x: 5000, y: 3000, width: 260, height: 600)
+            seed.setText(id, "synthetic readonly note")
+            seed.setFrame(id, expanded: saved)
+            if folded {
+                _ = seed.apply(NoteStore.LayoutChange(frames: [:], collapsed: [id]))
+            }
+            seed.setVisible(id, false)
+            let blocker = directory.appendingPathComponent(journal ? "command-journal.json" : "preferences.json")
+            try Data("invalid but must be preserved".utf8).write(to: blocker)
+            func inventory() throws -> [String: Data] {
+                var result: [String: Data] = [:]
+                for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+                    result[file.lastPathComponent] = try Data(contentsOf: file)
+                }
+                return result
+            }
+            let before = try inventory()
+            let store = NoteStore(directory: directory, takingLock: false)
+            Check.that(!store.isWritable, "fixture blocks writes")
+            let screen = CGRect(x: -900, y: -100, width: 900, height: 500)
+            store.setVisible(id, true)
+            store.setFrame(id, expanded: screen)
+            Check.equal(store.note(id)?.frame, saved, "read-only store rejects geometry mutation")
+            let shown = store.windowFrame(id, screens: [screen])!
+            Check.that(screen.contains(shown), "saved-hidden readonly note is displayed on remaining screen")
+            if folded { Check.equal(shown.height, LayoutState.collapsedHeight, "folded recovery uses title bar") }
+            let smaller = CGRect(x: 0, y: 0, width: 640, height: 300)
+            Check.that(smaller.contains(store.windowFrame(id, screens: [smaller])!), "display changes recover without a store write")
+            Check.equal(store.windowFrame(id, screens: [screen]), shown, "repeat recovery is stable")
+            Check.equal(store.windowFrame(id, screens: []), store.layout.renderedFrame(id: id, expanded: saved), "no screen preserves geometry")
+            Check.equal(store.note(id)?.visible, false, "presentation leaves saved visibility unchanged")
+            Check.equal(store.note(id)?.frame, saved, "presentation preserves expanded height and frame")
+            Check.equal(store.note(id)?.text, "synthetic readonly note", "presentation preserves content")
+            Check.that(!store.hasUnsavedChanges, "presentation creates no unsavable draft")
+            Check.equal(try inventory(), before, "all profile files remain byte-identical")
+        }
+    }
+}
