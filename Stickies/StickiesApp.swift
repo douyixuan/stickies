@@ -78,5 +78,13 @@ final class StickiesDelegate: NSObject, NSApplicationDelegate {
         NoteStore.shared.recoverDisplayLayout()
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        NoteStore.shared.refreshWindowActivation(true)
+    }
+
+    func applicationDidResignActive(_ notification: Notification) {
+        NoteStore.shared.refreshWindowActivation(false)
+    }
+
     func applicationWillTerminate(_ notification: Notification) { NoteStore.shared.stopCommandService() }
 }

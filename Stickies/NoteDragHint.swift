@@ -58,4 +58,9 @@ enum NoteWindowMode: String, Codable, CaseIterable {
     var collectionBehavior: NSWindow.CollectionBehavior {
         self == .desktop ? [.canJoinAllSpaces, .stationary, .ignoresCycle] : []
     }
+
+    /// Desktop notes stay behind other apps, but must be reachable while editing.
+    func presentationLevel(applicationActive: Bool) -> NSWindow.Level {
+        self == .desktop && applicationActive ? .normal : level
+    }
 }

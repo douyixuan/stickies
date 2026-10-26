@@ -20,6 +20,13 @@ struct WindowModeTests {
         precondition(NoteWindowMode.desktop.level.rawValue < NSWindow.Level.normal.rawValue)
         precondition(NoteWindowMode.desktop.level.rawValue > Int(CGWindowLevelForKey(.desktopIconWindow)))
         precondition(NoteWindowMode.floating.level == .floating)
+        precondition(NoteWindowMode.desktop.presentationLevel(applicationActive: true) == .normal)
+        precondition(NoteWindowMode.desktop.presentationLevel(applicationActive: false) == NoteWindowMode.desktop.level)
+        for active in [true, false, true, false] {
+            precondition(NoteWindowMode.standard.presentationLevel(applicationActive: active) == .normal)
+            precondition(NoteWindowMode.floating.presentationLevel(applicationActive: active) == .floating)
+            store.refreshWindowActivation(active)
+        }
         precondition(NoteWindowMode.desktop.collectionBehavior.contains(.canJoinAllSpaces))
         precondition(NoteWindowMode.desktop.collectionBehavior.contains(.stationary))
         precondition(!NoteWindowMode.standard.collectionBehavior.contains(.canJoinAllSpaces))

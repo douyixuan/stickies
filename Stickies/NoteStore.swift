@@ -336,7 +336,7 @@ final class NoteStore: ObservableObject {
             snapToScreenEdges = snap ?? snapToScreenEdges
             for (id, window) in windows {
                 let effective = effectiveWindowMode(id)
-                window.level = effective.level
+                window.level = effective.presentationLevel(applicationActive: NSApplication.shared.isActive)
                 window.collectionBehavior = effective.collectionBehavior
             }
             preferenceError = nil
@@ -409,6 +409,14 @@ final class NoteStore: ObservableObject {
         for note in activeNotes { show(note.id) }
     }
 
+    /// Presentation only: activation must not rewrite content, frames or preferences.
+    func refreshWindowActivation(_ active: Bool) {
+        for (id, window) in windows {
+            let mode = effectiveWindowMode(id)
+            window.level = mode.presentationLevel(applicationActive: active)
+        }
+    }
+
     func restoreWindows() {
         if notes.isEmpty && canSave {
             createNote()
@@ -477,7 +485,7 @@ final class NoteStore: ObservableObject {
         dragHint.toolTip = "Drag this title bar to move the note. Select text below to edit."
         dragAccessory.view = dragHint
         window.addTitlebarAccessoryViewController(dragAccessory)
-        window.level = effectiveWindowMode(id).level
+        window.level = effectiveWindowMode(id).presentationLevel(applicationActive: NSApplication.shared.isActive)
         window.collectionBehavior = effectiveWindowMode(id).collectionBehavior
         window.minSize = NSSize(width: 180, height: 120)
         window.isReleasedWhenClosed = false

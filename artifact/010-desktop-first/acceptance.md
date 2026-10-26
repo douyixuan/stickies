@@ -172,3 +172,14 @@ PR28 ready 后复审补正：只读已加载便签的搜索无结果保持正常
 签名与包校验通过；arm64 实际运行，x86_64 仅确认产物存在。脱敏执行结果见[verification.json](evidence/cli-0.3.102/verification.json)、[集成日志](evidence/cli-0.3.102/integration-tests.log)及[原执行脚本](evidence/cli-0.3.102/verify.py)。脚本保留当时相邻源码/产物目录约定，仅作运行证据；脱敏 JSON 只替换机器绝对路径，不公开构建原始日志。[准确源码 CI](https://github.com/douyixuan/stickies/actions/runs/39818362585) 成功，但以上打包后实测是独立本机证据，不能混称 CI 内运行。
 
 对应[生命周期细化](../../roadmap/note-lifecycle.md)中的持久化与本机恢复子路径；使用方式见[CLI 文档](../../docs/CLI.md)。离线 CLI 证据不覆盖真实 GUI 点击、运行中 GUI 通道、双机同步、断电耐久性或日用安装；根 ROADMAP 勾选不变，不把既有命令重算为新增功能。
+
+
+## 2026-10-26 桌面便签激活可达性修复
+
+用户在已安装 0.3.105 反馈便签堆叠且选不中。已实际查看其截图（仅私有排查，不入仓），并只读核对窗口偏好为 desktop、无单张覆盖；未读取或修改真实便签正文。截图显示多个便签被普通应用遮挡，但不能据此断言全部点击问题只有一种原因。
+
+确认的代码缺口：Desktop 窗口在应用激活和 Dock 重开后仍固定为桌面层，makeKeyAndOrderFront 不会改变该层级。修复使 Desktop 在本应用激活时暂用 normal 层，失活后回到原桌面层；新建窗口及偏好切换共用相同规则。Ordinary/Floating 及单张覆盖规则保持，激活不写偏好、正文或 frame，不主动显示隐藏/最小化窗口，也不逐张 orderFront 重排窗口。独立复审指出的任意堆叠重排已去除。
+
+临时入口：用户可自行打开 Open Canvas（⇧⌘0），在 List 选择便签；或将 Default Note Window Mode 改为 Ordinary Windows。执行者未代改日用偏好。
+
+窗口模式四阶段隔离测试和原生编译通过；新增断言验证反复激活/失活的层级及非桌面模式不变。未执行真实点击、遮挡、键盘焦点、窗口层级排序或最小化 GUI 验收，不将代码修复当作用户故障全部复验成功。ROADMAP 不勾选。修复包安装须另核正常退出、备份和兼容条件，不自动退出日用实例。
