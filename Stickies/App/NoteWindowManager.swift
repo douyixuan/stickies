@@ -78,7 +78,7 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
             return
         }
 
-        let window = NoteWindow(contentRect: store.note(id)?.frame ?? note.frame,
+        let window = NoteWindow(contentRect: onScreen(id, expanded: store.note(id)?.frame ?? note.frame),
                                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
                                 backing: .buffered, defer: false)
         window.onTitleDoubleClick = { [weak self] in self?.toggleCollapse(id) }
@@ -154,7 +154,7 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
         window.titleVisibility = collapsed ? .visible : .hidden
         window.contentView?.isHidden = collapsed
 
-        let target = store.layout.renderedFrame(id: id, expanded: note.frame)
+        guard let target = store.windowFrame(id, screens: screens) else { return }
         if window.frame != target {
             applyingFrames.insert(id)
             window.setFrame(target, display: true, animate: false)
@@ -215,6 +215,12 @@ final class NoteWindowManager: NSObject, NSWindowDelegate {
     func recoverDisplayLayout() {
         let available = screens
         guard !available.isEmpty else { return }
+        if !store.isWritable {
+            // Includes a saved-hidden note explicitly opened during this read-only run.
+            // No visibility, selection or persistent state is changed here.
+            applyAllPresentations()
+            return
+        }
         var frames: [UUID: CGRect] = [:]
         for note in store.visibleNotes {
             let restored = onScreen(note.id, expanded: note.frame)
