@@ -41,15 +41,44 @@ Everything is per-Mac. There is no sync, by design.
 
 ## Command line
 
+The CLI is a separate build; `build-app.sh` does not bundle it in the app.
+With the macOS command-line developer tools installed, run these commands from
+this checkout. Nothing is installed in PATH or added to your shell configuration.
+
 ```sh
 bash scripts/build-cli.sh
-build/bin/istk --dir ~/Library/Application\ Support/Stickies list
+build/bin/istk help
+build/bin/istk version
+profile="$(mktemp -d -t istk-demo)"
+build/bin/istk --dir "$profile" add 'Example note'
+build/bin/istk --dir "$profile" list
+build/bin/istk --dir "$profile" search 'Example'
+# Copy the returned id into this command:
+build/bin/istk --dir "$profile" get '<id>'
 ```
 
-`list`, `search <query>`, `get <id>` and `add [text]`, all JSON. It takes the same
-exclusive lock the app does, so it reads while the app is open but refuses to write
-rather than racing it. A profile it cannot fully read fails every command instead of
-answering with what it happened to load.
+Each invocation is a new process. Repeating `list` or `get` reads the saved notes
+from the same temporary directory. `add` without text reads UTF-8 from stdin,
+including multiple lines. The executable remains at `build/bin/istk`; use that
+path (or its absolute equivalent), not a bare `istk` command.
+
+The data commands are `list`, `search <query>`, `get <id>` and `add [text]`;
+their successful responses are JSON. `help` prints plain-text usage, while
+`version` prints JSON. This CLI reports version `1.0`, schema `10`; that is not an app build
+number or commit identifier. It uses `--dir`, whereas the older 0.3 CLI bundled
+in 0.3.105 uses `--data-dir` and has a different command contract. Do not
+interchange the examples or binaries.
+
+It takes the app's exclusive lock: reads remain available while the app owns the
+folder, but writes are refused. An incompletely readable profile fails rather
+than returning partial results. These examples use synthetic data only.
+
+Older profiles can be read without rewriting notes, but the first successful
+note write converts them to schema 10. The 0.3 CLI cannot read that format.
+Before any real upgrade, keep a verified complete, quiescent profile backup;
+rollback requires restoring that profile as well as the old app. Preserve newer
+edits separately before rollback. A pending old command journal must be resolved
+by the old version, not deleted or bypassed.
 
 ## How it is put together
 
