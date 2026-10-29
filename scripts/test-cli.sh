@@ -2,8 +2,11 @@
 # End-to-end checks for build/bin/istk against throwaway profiles.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-[[ -x build/bin/istk ]] || bash scripts/build-cli.sh >/dev/null
-istk=build/bin/istk
+istk=${ISTK_TEST_BINARY:-build/bin/istk}
+if [[ -z ${ISTK_TEST_BINARY:-} && ! -x "$istk" ]]; then
+    bash scripts/build-cli.sh >/dev/null
+fi
+[[ -x "$istk" ]] || { echo "CLI executable missing: $istk" >&2; exit 1; }
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
 
