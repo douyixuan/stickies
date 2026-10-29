@@ -2,8 +2,11 @@
 # End-to-end checks for build/bin/istk against throwaway profiles.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-[[ -x build/bin/istk ]] || bash scripts/build-cli.sh >/dev/null
-istk=build/bin/istk
+istk=${ISTK_TEST_BINARY:-build/bin/istk}
+if [[ -z ${ISTK_TEST_BINARY:-} && ! -x "$istk" ]]; then
+    bash scripts/build-cli.sh >/dev/null
+fi
+[[ -x "$istk" ]] || { echo "CLI executable missing: $istk" >&2; exit 1; }
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
 
@@ -46,7 +49,7 @@ def files(profile):
 
 with tempfile.TemporaryDirectory() as root:
     root = pathlib.Path(root)
-    profile = root / 'unicode'
+    profile = root / 'Unicode notes 📝'
     text = '中文便签 📝 café\n第二行\n末尾保留\n'
     note = run(profile, 'add', data=text.encode())
     assert note['text'] == text and not note['visible']
