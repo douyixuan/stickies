@@ -62,8 +62,9 @@ from the same temporary directory. `add` without text reads UTF-8 from stdin,
 including multiple lines. The executable remains at `build/bin/istk`; use that
 path (or its absolute equivalent), not a bare `istk` command.
 
-The current commands are `list`, `search <query>`, `get <id>` and `add [text]`,
-all JSON. This CLI reports version `1.0`, schema `10`; that is not an app build
+The data commands are `list`, `search <query>`, `get <id>` and `add [text]`;
+their successful responses are JSON. `help` prints plain-text usage, while
+`version` prints JSON. This CLI reports version `1.0`, schema `10`; that is not an app build
 number or commit identifier. It uses `--dir`, whereas the older 0.3 CLI bundled
 in 0.3.105 uses `--data-dir` and has a different command contract. Do not
 interchange the examples or binaries.

@@ -32,7 +32,7 @@
 ## 现状与分支整理
 
 - 2026-10-26 合并的 [PR #31](https://github.com/douyixuan/stickies/pull/31) 已收敛为 Core / App / CLI，README 表明当前版本仅本地存储，提供原生窗口及多种布局。
-- [PR #32](https://github.com/douyixuan/stickies/pull/32) 解决只读状态下的离屏窗口，但 GUI 实测尚未完成；[#33](https://github.com/douyixuan/stickies/pull/33) 解决 CLI 非法输入。按独立代码审查、CI、回归证据分别处理。
+- [PR #32](https://github.com/douyixuan/stickies/pull/32) 为待合并草稿，拟解决只读状态下的离屏窗口，但 GUI 实测尚未完成；[#33](https://github.com/douyixuan/stickies/pull/33) 为待合并草稿，拟解决 CLI 非法输入。按独立代码审查、CI、回归证据分别处理。
 - 功能是否存在 ≠ 功能已经验收。**真实鼠标、Spaces、Stage Manager、多显示器行为必须在 Mac 上验证**；[34 项 QA](docs/QA.md) 是 M0 的实机测试入口。
 - 旧版本 0.3 到新 schema 10 的转换不可无数据备份直接回退。升级前保留完整、静态 profile；旧版 CLI 无法读取 schema 10。
 - 现阶段不恢复同步框架、通用 agent 命令账本、无限画布、复杂工作区或任意云盘桥接。基础 CLI `list/search/get/add` 保持为简单工具，不与 GUI 交付抢优先级。
