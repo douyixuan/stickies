@@ -73,3 +73,50 @@ Each step is one observation. If a step fails, that is the bug report — note w
 33. Quit normally with unsaved edits in a note. Nothing is lost.
 34. Corrupt `build/preview-data/notes.json` by hand and launch. The app says it is not
     saving, and the file is unchanged when you quit.
+
+## Upgrade and rollback gate (issue #36)
+
+Keep this separate from the GUI pass above. Never rehearse on a user's profile.
+A backup is complete only if it includes every profile file and subdirectory,
+including notes, layout, trash, preferences, old command journals and ledger
+segments, and any unknown extension files. `notes.lock` is runtime coordination,
+not saved content: never remove or replace a lock to obtain access.
+
+1. Identify the exact old executable, source commit and profile path. Confirm
+   normal exit and absence of an active writer; obtain the existing exclusive
+   lock before taking a real backup. If that is not possible, stop.
+2. Copy the complete quiescent profile into a new staging backup, preserving file
+   metadata. Compare the relative file inventory and every file's hash. Publish
+   the verified backup by renaming staging on the same filesystem; an interrupted
+   staging copy is not a usable backup. Keep the old executable separately.
+3. Restore the backup to a separate synthetic rehearsal directory and verify the
+   same inventory and hashes before using either executable. Record the old and
+   new binary hashes, schema, and every command's exit status.
+4. Read with the new version, then write a synthetic note and reopen it in a new
+   process. Confirm old text, colors, geometry, visibility and trash membership.
+   A successful notes write upgrades the file to schema 10.
+5. Before rollback, separately back up and verify the post-upgrade profile so new
+   edits are retained. Restore the original complete backup into another empty
+   directory; do not overlay old notes onto new side files. Verify all hashes,
+   then use the old executable to read the original notes and trash again.
+6. A real replacement is a separate authorized installation operation, performed
+   only after both applications have stopped normally and the backup/restore
+   rehearsal passes. Never run an older writer against the schema 10 profile.
+
+Failure handling: unreadable files and unknown schemas remain untouched. A
+pending `command-journal.json` must be resolved with the matching old version;
+copying it away or deleting it is not recovery. Failed writes, interrupted copies,
+lock conflicts or hash mismatches stop the upgrade before replacement. Retain the
+original and failed staging materials for diagnosis.
+
+Existing evidence: the isolated combined candidate `1d76386993aab0149b72ccfd6b6df195182dfc03`
+passed [CI](https://github.com/douyixuan/stickies/actions/runs/40300233097).
+The local `daily-update-105/rollback-verification.json` record from that rehearsal
+used the actual 0.3.105 packaged CLI to create synthetic v2/v3 profiles, upgraded
+with the combined CLI, preserved newer edits separately, restored byte-identical
+original files, and read notes/trash with the old CLI. The old CLI refused schema
+10 with exit 65. This is existing evidence, not a new test run or GUI acceptance.
+
+Still unverified: an actual 0.1 executable/fixture provenance, interruption during
+backup publication, the real-user installation, and the full GUI pass. A successful
+synthetic rollback or CLI input test alone does not close issue #36 or #42.
