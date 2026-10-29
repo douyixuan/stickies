@@ -49,7 +49,7 @@ def files(profile):
 
 with tempfile.TemporaryDirectory() as root:
     root = pathlib.Path(root)
-    profile = root / 'unicode'
+    profile = root / 'Unicode notes 📝'
     text = '中文便签 📝 café\n第二行\n末尾保留\n'
     note = run(profile, 'add', data=text.encode())
     assert note['text'] == text and not note['visible']

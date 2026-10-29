@@ -26,4 +26,8 @@ jobs:
           bash scripts/build-app.sh
 
       - name: Check the signed app's bundled CLI with isolated profiles
-        run: ISTK_TEST_BINARY="$PWD/build/iStickies2.app/Contents/MacOS/istk" bash scripts/test-cli.sh
+        run: |
+          mkdir -p "build/CLI delivery test"
+          cp -R build/iStickies2.app "build/CLI delivery test/iStickies2.app"
+          codesign --verify --deep --strict "build/CLI delivery test/iStickies2.app"
+          ISTK_TEST_BINARY="$PWD/build/CLI delivery test/iStickies2.app/Contents/MacOS/istk" bash scripts/test-cli.sh

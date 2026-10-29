@@ -24,4 +24,15 @@ echo
 echo "Built build/iStickies2.app"
 echo "Drag it to /Applications to keep it. First launch: right-click > Open (it is not notarized)."
 
-echo "CLI: build/iStickies2.app/Contents/MacOS/istk help"
+cat <<'USAGE'
+CLI (from this checkout; no PATH changes):
+  cli="$PWD/build/iStickies2.app/Contents/MacOS/istk"
+  "$cli" help
+  "$cli" version
+  profile="$(mktemp -d -t istk-demo)"
+  "$cli" --dir "$profile" add 'Example note'
+  "$cli" --dir "$profile" list
+Keep both paths quoted, including when the app path contains spaces.
+Every data command requires --dir; it never selects the app's default profile.
+Use only this synthetic profile for a trial. This example does not launch the app.
+USAGE
