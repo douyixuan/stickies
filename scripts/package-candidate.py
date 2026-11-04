@@ -72,6 +72,7 @@ with tempfile.TemporaryDirectory(prefix='istk candidate ') as temp:
                        stderr=subprocess.STDOUT, check=True)
     assert sha(archive) == archive_hash
     report = dict(sourceSHA=source, archive=archive.name, sha256=archive_hash,
+                  inputSHA256=actual.get('StickiesBuildInputSHA256'),
                   candidateOnly=True, version=actual['CFBundleShortVersionString'],
                   build=actual['CFBundleVersion'], bundleID=actual['CFBundleIdentifier'],
                   appArchitectures=app_archs, cliArchitectures=cli_archs,

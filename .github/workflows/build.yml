@@ -11,6 +11,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Build input isolation regression
+        run: python3 Tests/BuildSnapshotTests.py
+
       - name: Core tests — data, migration, layout, recovery (no windows)
         run: bash scripts/test.sh
 
