@@ -8,6 +8,7 @@ testTrash()
 testLayout()
 testArrangeKeepsFoldedHeights()
 testReadOnlyProfiles()
+try testReadOnlyWindowRecovery()
 
 Scratch.cleanUp()
 Check.summary()
