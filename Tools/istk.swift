@@ -30,6 +30,18 @@ struct Istk {
         guard let command = arguments.first else { fail(64, usage) }
         let rest = Array(arguments.dropFirst())
 
+        // Reject malformed invocations before opening (or creating) a profile.
+        switch command {
+        case "list", "help", "--help", "-h", "version", "--version":
+            guard rest.isEmpty else { fail(64, "\(command) does not accept arguments") }
+        case "search":
+            guard rest.count == 1 else { fail(64, "search needs one quoted query") }
+        case "get":
+            guard rest.count == 1, UUID(uuidString: rest[0]) != nil else { fail(64, "get needs one note id") }
+        case "add": break
+        default: fail(64, usage)
+        }
+
         switch command {
         case "help", "--help", "-h":
             print(usage)
@@ -59,9 +71,15 @@ struct Istk {
             guard let note = store.note(id), !store.isTrashed(id) else { fail(66, "no note with id \(id)") }
             emit(describe(note))
         case "add":
-            let text = rest.isEmpty
-                ? String(data: FileHandle.standardInput.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                : rest.joined(separator: " ")
+            let text: String
+            if rest.isEmpty {
+                guard let decoded = String(data: FileHandle.standardInput.readDataToEndOfFile(), encoding: .utf8) else {
+                    fail(64, "add stdin must be valid UTF-8")
+                }
+                text = decoded
+            } else {
+                text = rest.joined(separator: " ")
+            }
             guard let id = store.createNote(visible: false) else { fail(70, store.lastError ?? "could not create a note") }
             store.setText(id, text)
             guard !store.hasUnsavedChanges, let note = store.note(id) else {
