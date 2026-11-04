@@ -26,7 +26,9 @@ app_archs=$(xcrun lipo -archs "build/iStickies2.app/Contents/MacOS/$app_executab
 ISTK_BUILD_ARCHS="$app_archs" bash scripts/build-cli.sh
 cp build/bin/istk build/iStickies2.app/Contents/MacOS/istk
 [[ $(git rev-parse HEAD) == "$build_source" ]] || { echo 'Source HEAD changed during build' >&2; exit 1; }
-if ! git diff --quiet HEAD --; then build_clean=false; fi
+if ! git diff --quiet HEAD -- || [[ -n $(git ls-files --others --exclude-standard Stickies Tools Assets) ]]; then
+    build_clean=false
+fi
 /usr/libexec/PlistBuddy -c "Add :StickiesBuildSourceSHA string $build_source" build/iStickies2.app/Contents/Info.plist
 /usr/libexec/PlistBuddy -c "Add :StickiesBuildSourceClean bool $build_clean" build/iStickies2.app/Contents/Info.plist
 codesign --force --deep --sign - build/iStickies2.app
