@@ -9,6 +9,9 @@ import plistlib
 import subprocess
 import tempfile
 
+if not __debug__:
+    raise SystemExit("Candidate verification requires Python assertions; disable optimization")
+
 ROOT = Path(__file__).resolve().parent.parent
 os.chdir(ROOT)
 
@@ -35,6 +38,8 @@ with tempfile.TemporaryDirectory(prefix='istk candidate ') as temp:
     subprocess.run(['ditto', str(app), str(staged)], check=True)
     info_path = staged / 'Contents/Info.plist'
     info = plistlib.loads(info_path.read_bytes())
+    if info.get('StickiesBuildSourceSHA') != source or info.get('StickiesBuildSourceClean') is not True:
+        raise SystemExit('Rebuild the app from this clean source HEAD before packaging')
     info.update(CFBundleShortVersionString='0.0.0', CFBundleVersion='0',
                 StickiesCandidate=True, StickiesGitCommit=source)
     info_path.write_bytes(plistlib.dumps(info))
