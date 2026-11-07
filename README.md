@@ -107,8 +107,10 @@ SHA-256 digests. The report must identify the successful exact-source repository
 via `ciRunID`, and the verified archive and executable hashes via `standaloneCLI`.
 The ZIP contains only `istk`, `manifest.json`, and `USAGE.txt`; its manifest must record
 `releaseVersion`, `candidateOnly: false`, source/hash, ARM64, macOS 14 and schema 10.
-Current candidate packaging intentionally does not satisfy this stable-release contract.
-The generator cannot approve or relabel a candidate into a release.
+The App candidate does not satisfy this stable-release contract. CI separately builds
+versioned CLI release assets from the explicit CLI source version, verifies the final
+ZIP using isolated profiles, and retains them without publishing. The generator
+cannot approve or relabel an App candidate into a release.
 
 After those release requirements are met, run the generator with the actual tag and
 an unused formula output path, then review and test the result in the intended tap.

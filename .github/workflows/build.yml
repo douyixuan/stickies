@@ -42,3 +42,11 @@ jobs:
           path: build/candidate/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Keep verified versioned CLI assets (not published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: istk-cli-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/cli-release/*
+          if-no-files-found: error
+          retention-days: 14

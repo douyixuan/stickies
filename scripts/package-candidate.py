@@ -9,6 +9,7 @@ import plistlib
 import shutil
 import subprocess
 import tempfile
+from cli_release import archive_bytes
 
 if not __debug__:
     raise SystemExit("Candidate verification requires Python assertions; disable optimization")
@@ -66,7 +67,7 @@ with tempfile.TemporaryDirectory(prefix='istk candidate ') as temp:
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(restored)], check=True)
     subprocess.run(['codesign', '--verify', '--strict', str(cli)], check=True)
     version = json.loads(run(str(cli), 'version'))
-    assert version == {'version': '1.0', 'schemaVersion': 10}
+    assert version == {'version': '1.0.0', 'schemaVersion': 10}
     env = dict(os.environ, ISTK_TEST_BINARY=str(cli))
     env.pop('STICKIES_DATA_DIR', None)
     with (output / 'cli-check.log').open('wb') as log:
@@ -128,4 +129,45 @@ ad-hoc signed CI candidate, not a stable Homebrew release or notarized product.
     (output / (cli_archive.name + '.sha256')).write_text(sha(cli_archive) + '  ' + cli_archive.name + '\n')
     (output / 'verification.json').write_text(json.dumps(report, indent=2) + '\n')
     (output / (archive.name + '.sha256')).write_text(archive_hash + '  ' + archive.name + '\n')
+    # Build separate versioned CLI release assets from the newly compiled,
+    # verified source version. App/candidate manifests remain unchanged.
+    assert cli_archs == ['arm64'], 'CLI 1.0.0 distribution supports ARM64 only'
+    release_dir = ROOT / 'build/cli-release'
+    release_dir.mkdir(parents=True, exist_ok=False)
+    release_name = f"istk-{version['version']}-macos-arm64.zip"
+    release_manifest = dict(sourceSHA=source, releaseVersion=version['version'],
+                            cliVersion=version['version'], schemaVersion=10,
+                            minimumMacOS='14.0', architectures=cli_archs,
+                            binarySHA256=sha(cli), candidateOnly=False,
+                            signature='ad-hoc', notarized=False)
+    usage = (cli_stage / 'USAGE.txt').read_text().replace(
+        'istk CLI candidate', 'istk CLI ' + version['version']).replace(
+        'ad-hoc signed CI candidate, not a stable Homebrew release or notarized product.',
+        'ad-hoc signed CLI build. It is not notarized and does not install or validate the GUI App.')
+    files = {'istk': cli.read_bytes(),
+             'manifest.json': (json.dumps(release_manifest, indent=2, sort_keys=True) + '\n').encode(),
+             'USAGE.txt': usage.encode()}
+    encoded = archive_bytes(files)
+    assert encoded == archive_bytes(files), 'Archive encoding must be reproducible'
+    release_archive = release_dir / release_name
+    release_archive.write_bytes(encoded)
+    release_extract = temp / 'versioned CLI release'
+    subprocess.run(['ditto', '-x', '-k', str(release_archive), str(release_extract)], check=True)
+    release_cli = release_extract / 'istk'
+    assert sha(release_cli) == sha(cli) and os.access(release_cli, os.X_OK)
+    assert arches(release_cli) == cli_archs
+    subprocess.run(['codesign', '--verify', '--strict', str(release_cli)], check=True)
+    assert json.loads(run(str(release_cli), 'version')) == version
+    with (release_dir / 'cli-check.log').open('wb') as log:
+        subprocess.run(['bash', 'scripts/test-cli.sh'],
+                       env=dict(env, ISTK_TEST_BINARY=str(release_cli)),
+                       stdout=log, stderr=subprocess.STDOUT, check=True)
+    release_report = dict(sourceSHA=source, ciRunID=int(os.environ.get('GITHUB_RUN_ID', '0')),
+                          releaseVersion=version['version'], isolatedCLIRegression='passed',
+                          signature='ad-hoc verified after extraction', notarized=False,
+                          executedHostArchitecture=platform.machine(),
+                          standaloneCLI=dict(archive=release_name, sha256=sha(release_archive),
+                                             binarySHA256=sha(release_cli), verification='passed'))
+    (release_dir / 'verification.json').write_text(json.dumps(release_report, indent=2) + '\n')
+    (release_dir / (release_name + '.sha256')).write_text(sha(release_archive) + '  ' + release_name + '\n')
     print(json.dumps(report, indent=2))
