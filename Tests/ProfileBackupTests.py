@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Complete-profile backup/restore and failure tests using only synthetic data."""
 import importlib.util
+import ctypes
+from types import SimpleNamespace
 import json
 from pathlib import Path
 import subprocess
@@ -95,6 +97,35 @@ class BackupTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 module.backup(self.profile, self.archive)
         self.assertEqual(self.archive.read_bytes(), b'other writer')
+
+    def test_unreadable_subdirectory_never_publishes(self):
+        restricted = self.profile / 'restricted'
+        restricted.mkdir()
+        (restricted / 'omitted.json').write_text('must not silently omit')
+        restricted.chmod(0)
+        try:
+            with self.assertRaises(PermissionError):
+                module.backup(self.profile, self.archive)
+            self.assertFalse(self.archive.exists())
+        finally:
+            restricted.chmod(0o700)
+
+    def test_restore_publish_race_does_not_replace_directory(self):
+        module.backup(self.profile, self.archive)
+        destination = self.root / 'restored'
+        real = ctypes.CDLL(None, use_errno=True).renamex_np
+        real.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+        real.restype = ctypes.c_int
+        def race(source, target, flags):
+            destination.mkdir()
+            (destination / 'owner').write_text('other writer')
+            return real(source, target, flags)
+        with patch.object(module.ctypes, 'CDLL', return_value=SimpleNamespace(renamex_np=race)):
+            with self.assertRaises(OSError):
+                module.restore(self.archive, destination)
+        self.assertEqual((destination / 'owner').read_text(), 'other writer')
+        self.assertEqual(list(destination.iterdir()), [destination / 'owner'])
+        self.assertFalse(list(self.root.glob('*.partial')))
 
     def test_symlink_and_missing_lock_refused(self):
         (self.profile / 'link').symlink_to(self.profile / 'notes.json')

@@ -44,7 +44,14 @@ def locked(profile):
 
 def inventory(profile):
     entries = {}
-    for path in sorted(profile.rglob('*')):
+    def walk(directory):
+        # Unlike glob/rglob, iterdir propagates unreadable-directory errors.
+        # A partial traversal must never become a verified complete backup.
+        for path in sorted(directory.iterdir()):
+            yield path
+            if stat.S_ISDIR(path.lstat().st_mode):
+                yield from walk(path)
+    for path in walk(profile):
         rel = path.relative_to(profile).as_posix()
         if rel == 'notes.lock':
             continue
@@ -71,6 +78,7 @@ def verify(archive):
         require(isinstance(entries, dict), 'Invalid entry manifest')
         expected = {'manifest.json'}
         for name, entry in entries.items():
+            require(isinstance(entry, dict), 'Invalid entry metadata')
             path = PurePosixPath(name)
             require(name and path.parts and str(path) == name and not path.is_absolute() and '..' not in path.parts
                     and path.parts[0] != 'notes.lock', 'Unsafe profile path')
