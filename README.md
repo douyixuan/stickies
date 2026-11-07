@@ -92,8 +92,18 @@ trust a build.
 
 CI retains a standalone `istk` ZIP with a manifest and usage instructions alongside
 the App candidate. These archives are candidates, not stable Homebrew releases.
-No `brew install` command is available yet. The CLI can be used by its full path;
-every data command requires an explicit `--dir`. Use a new synthetic directory first.
+The independent [CLI 1.0.0 release](https://github.com/douyixuan/stickies/releases/tag/cli-v1.0.0)
+is available for Apple Silicon through the [Homebrew tap](https://github.com/douyixuan/homebrew-tap):
+
+```sh
+brew install douyixuan/tap/istk
+brew update && brew upgrade douyixuan/tap/istk
+```
+
+This installs only the CLI, not the GUI App. Every data command requires an explicit
+`--dir`. Use a new synthetic directory first. The tap CI verifies installation and
+isolated create/read/search; it does not operate on daily notes. See the release
+for exact source, checksums, tested host and ad-hoc signature boundaries.
 
 `scripts/prepare-cli-formula.py` prepares a formula only **after** an independently
 accepted CLI release exists. It performs read-only network checks and never publishes,
@@ -114,5 +124,5 @@ cannot approve or relabel an App candidate into a release.
 
 After those release requirements are met, run the generator with the actual tag and
 an unused formula output path, then review and test the result in the intended tap.
-Formal version selection, stable CLI acceptance, release upload and tap publication
-remain separate steps. CLI acceptance does not imply GUI or App upgrade acceptance.
+For subsequent versions, source versioning, exact main CI, release upload and tap
+verification remain separate steps. CLI acceptance does not imply GUI or App upgrade acceptance.
