@@ -15,6 +15,7 @@ jobs:
         run: |
           python3 Tests/BuildSnapshotTests.py
           python3 Tests/CLIFormulaTests.py
+          python3 Tests/ProfileBackupTests.py
 
       - name: Core tests — data, migration, layout, recovery (no windows)
         run: bash scripts/test.sh
