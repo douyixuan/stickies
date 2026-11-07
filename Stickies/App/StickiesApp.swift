@@ -36,6 +36,7 @@ struct StickiesApp: App {
         Group {
             Button("New Note") { windows.createNote() }
                 .keyboardShortcut("n")
+                .disabled(!store.isWritable)
             Button("Show All Notes") { windows.showAll() }
             Button("Hide All Notes") { windows.hideAll() }
             TrashMenu()
