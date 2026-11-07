@@ -1,5 +1,5 @@
 {
-  "description": "Synthetic payloads emitted/read by pinned historical code; no user data. v01/v02/v03 denote format families, not assertions of shipped marketing versions.",
+  "description": "Synthetic note/journal payloads emitted/read by pinned historical code; no user data. v01/v02/v03 denote format families, not assertions of shipped marketing versions.",
   "commits": {
     "v01": "4b8a6b7fa467da5b2b516168c18eb3017e6c1525",
     "v02": "369e65b21cfc8176db04dd69a0c5488f881e195e",
@@ -33,5 +33,6 @@
     "v03-journal/preferences.json": "0c151c33b3fb3baf1c06b6f8da8b8c664455cdad92eecda5498a3fa8daa79200",
     "v03-journal/trash.json": "e42fe5f45f0c86ba4a103c7074ecd69fd980899e40375fcd30839c80c942d5f6"
   },
-  "journal": "Historical transaction interrupted after prepared; recovery verified on a separate copy."
+  "journal": "Historical transaction interrupted after prepared; recovery verified on a separate copy.",
+  "manuallySeededFiles": "preferences.json uses an explicit synthetic keepOnTop value; it is not historical writer output."
 }

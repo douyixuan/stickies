@@ -129,8 +129,9 @@ if mode == "journal" {
         lock.unlink()
     files = {p.relative_to(profiles).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
              for p in sorted(profiles.rglob('*')) if p.is_file()}
-    provenance = dict(description='Synthetic payloads emitted/read by pinned historical code; no user data. '
+    provenance = dict(description='Synthetic note/journal payloads emitted/read by pinned historical code; no user data. '
                      'v01/v02/v03 denote format families, not assertions of shipped marketing versions.',
+                     manuallySeededFiles='preferences.json uses an explicit synthetic keepOnTop value; it is not historical writer output.',
                      commits=COMMITS, sourceSHA256=SOURCES, fixtureSHA256=files,
                      journal='Historical transaction interrupted after prepared; recovery verified on a separate copy.')
     OUT.mkdir(parents=True, exist_ok=True)
