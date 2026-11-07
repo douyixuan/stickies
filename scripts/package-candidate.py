@@ -32,7 +32,8 @@ assert app.is_dir(), 'Build the app first'
 output = ROOT / 'build/candidate'
 output.mkdir(parents=True, exist_ok=True)
 archive = output / f'iStickies2-candidate-{source}.zip'
-assert not archive.exists(), 'Use a fresh build output; never replace a verified archive'
+cli_archive = output / f'istk-candidate-{source}.zip'
+assert not archive.exists() and not cli_archive.exists(), 'Use a fresh build output; never replace a verified archive'
 with tempfile.TemporaryDirectory(prefix='istk candidate ') as temp:
     temp = Path(temp)
     staged = temp / 'stage/iStickies2.app'
@@ -111,7 +112,6 @@ quiescent profile backup; rollback restores the whole profile, not just the app.
 manifest.json identifies the source, architecture and binary hash. This is an
 ad-hoc signed CI candidate, not a stable Homebrew release or notarized product.
 """)
-    cli_archive = output / f'istk-candidate-{source}.zip'
     subprocess.run(['ditto', '-c', '-k', str(cli_stage), str(cli_archive)], check=True)
     cli_extract = temp / 'standalone extracted CLI'
     subprocess.run(['ditto', '-x', '-k', str(cli_archive), str(cli_extract)], check=True)
