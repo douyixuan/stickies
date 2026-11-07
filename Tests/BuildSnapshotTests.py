@@ -32,6 +32,14 @@ class SnapshotTests(unittest.TestCase):
             self.assertEqual((clean / 'Tools/istk.swift').read_text(), 'original')
             linked = root / 'Tools/link.swift'; linked.symlink_to(p)
             bad = Path(temp) / 'bad'; bad.mkdir()
-            with self.assertRaises(ValueError): m.capture(root, bad)
+            with self.assertRaises(ValueError):
+                m.capture(root, bad)
+            linked.unlink()
+            (root / 'Tools').rename(root / 'external-tools')
+            (root / 'Tools').symlink_to(root / 'external-tools', target_is_directory=True)
+            bad_top = Path(temp) / 'bad-top'
+            bad_top.mkdir()
+            with self.assertRaises(ValueError):
+                m.capture(root, bad_top)
 
 if __name__ == '__main__': unittest.main()

@@ -24,6 +24,8 @@ def capture(root, destination):
     captured = {}
     for name in INPUTS:
         base = root / name
+        if base.is_symlink():
+            raise ValueError("Symlink build input is not isolated: " + str(base))
         paths = base.rglob('*') if base.is_dir() else [base]
         for path in sorted(paths):
             if '__pycache__' in path.parts or path.suffix == '.pyc':
