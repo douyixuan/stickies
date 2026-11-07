@@ -9,6 +9,7 @@ import io
 import json
 from pathlib import Path
 import re
+import struct
 import urllib.request
 import zipfile
 
@@ -73,10 +74,14 @@ def prepare(tag, read=fetch):
         require(set(z.namelist()) == {'istk', 'manifest.json', 'USAGE.txt'}
                 and len(z.infolist()) == 3, 'Unexpected or duplicate archive entries')
         require(all(i.file_size <= 32 * 1024 * 1024 for i in z.infolist()), 'Expanded asset too large')
+        require(all((i.external_attr >> 16) & 0o170000 == 0o100000 for i in z.infolist()),
+                'Every archive entry must be a regular file')
         binary = z.read('istk')
         manifest = json.loads(z.read('manifest.json'))
         mode = z.getinfo('istk').external_attr >> 16
         require(mode & 0o170000 == 0o100000 and mode & 0o111, 'CLI must be an executable regular file')
+    require(len(binary) >= 32 and struct.unpack('<II', binary[:8]) == (0xFEEDFACF, 0x0100000C),
+            'CLI must have an ARM64 Mach-O header, not only a manifest declaration')
     require(manifest.get('candidateOnly') is False and manifest.get('releaseVersion') == version,
             'Candidate archives cannot be promoted by this generator')
     require(manifest.get('sourceSHA') == commit and manifest.get('architectures') == ['arm64']

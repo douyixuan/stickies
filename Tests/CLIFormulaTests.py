@@ -9,6 +9,7 @@ from pathlib import Path
 import unittest
 import subprocess
 import tempfile
+import struct
 import zipfile
 
 spec = importlib.util.spec_from_file_location('formula', Path(__file__).resolve().parents[1] / 'scripts/prepare-cli-formula.py')
@@ -20,7 +21,8 @@ class FormulaTests(unittest.TestCase):
     def setUp(self):
         self.tag = 'cli-v1.0.0'
         self.sha = 'a' * 40
-        self.binary = b'synthetic fixture, never executed'
+        self.binary = struct.pack('<8I', 0xFEEDFACF, 0x0100000C, 0, 0, 0, 0, 0, 0) + b'fixture, never executed'
+        self.usage_mode = 0o100644
         self.manifest = dict(sourceSHA=self.sha, candidateOnly=False, releaseVersion='1.0.0',
                              architectures=['arm64'], minimumMacOS='14.0', schemaVersion=10,
                              binarySHA256=hashlib.sha256(self.binary).hexdigest())
@@ -34,8 +36,11 @@ class FormulaTests(unittest.TestCase):
             entry = zipfile.ZipInfo('istk')
             entry.external_attr = 0o100755 << 16
             z.writestr(entry, self.binary)
-            z.writestr('manifest.json', json.dumps(self.manifest))
-            z.writestr('USAGE.txt', 'synthetic fixture')
+            for name, mode, data in [('manifest.json', 0o100644, json.dumps(self.manifest)),
+                                      ('USAGE.txt', self.usage_mode, 'synthetic fixture')]:
+                entry = zipfile.ZipInfo(name)
+                entry.external_attr = mode << 16
+                z.writestr(entry, data)
         archive = buf.getvalue()
         report = dict(sourceSHA=self.sha, isolatedCLIRegression='passed', ciRunID=123,
                       standaloneCLI=dict(archive='istk-1.0.0-macos-arm64.zip',
@@ -103,6 +108,17 @@ class FormulaTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Unsupported source'):
                 module.prepare(self.tag, self.responses().__getitem__)
             self.manifest[field] = old
+
+    def test_symlink_document_rejected(self):
+        self.usage_mode = 0o120777
+        with self.assertRaisesRegex(ValueError, 'Every archive entry'):
+            module.prepare(self.tag, self.responses().__getitem__)
+
+    def test_non_macho_rejected(self):
+        self.binary = b'not an ARM64 executable' * 3
+        self.manifest['binarySHA256'] = hashlib.sha256(self.binary).hexdigest()
+        with self.assertRaisesRegex(ValueError, 'Mach-O header'):
+            module.prepare(self.tag, self.responses().__getitem__)
 
     def test_tag_cannot_inject_formula(self):
         with self.assertRaisesRegex(ValueError, 'exact stable'):
