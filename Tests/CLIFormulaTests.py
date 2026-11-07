@@ -21,7 +21,7 @@ class FormulaTests(unittest.TestCase):
     def setUp(self):
         self.tag = 'cli-v1.0.0'
         self.sha = 'a' * 40
-        self.binary = struct.pack('<8I', 0xFEEDFACF, 0x0100000C, 0, 0, 0, 0, 0, 0) + b'fixture, never executed'
+        self.binary = struct.pack('<8I', 0xFEEDFACF, 0x0100000C, 0, 2, 0, 0, 0, 0) + b'fixture, never executed'
         self.usage_mode = 0o100644
         self.manifest = dict(sourceSHA=self.sha, candidateOnly=False, releaseVersion='1.0.0',
                              architectures=['arm64'], minimumMacOS='14.0', schemaVersion=10,
@@ -119,6 +119,13 @@ class FormulaTests(unittest.TestCase):
         self.manifest['binarySHA256'] = hashlib.sha256(self.binary).hexdigest()
         with self.assertRaisesRegex(ValueError, 'Mach-O header'):
             module.prepare(self.tag, self.responses().__getitem__)
+
+    def test_object_and_dylib_rejected(self):
+        for kind in (1, 6):
+            self.binary = struct.pack('<8I', 0xFEEDFACF, 0x0100000C, 0, kind, 0, 0, 0, 0)
+            self.manifest['binarySHA256'] = hashlib.sha256(self.binary).hexdigest()
+            with self.assertRaisesRegex(ValueError, 'MH_EXECUTE'):
+                module.prepare(self.tag, self.responses().__getitem__)
 
     def test_tag_cannot_inject_formula(self):
         with self.assertRaisesRegex(ValueError, 'exact stable'):

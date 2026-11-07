@@ -82,6 +82,8 @@ def prepare(tag, read=fetch):
         require(mode & 0o170000 == 0o100000 and mode & 0o111, 'CLI must be an executable regular file')
     require(len(binary) >= 32 and struct.unpack('<II', binary[:8]) == (0xFEEDFACF, 0x0100000C),
             'CLI must have an ARM64 Mach-O header, not only a manifest declaration')
+    require(struct.unpack('<I', binary[12:16])[0] == 2,
+            'CLI Mach-O file type must be MH_EXECUTE')
     require(manifest.get('candidateOnly') is False and manifest.get('releaseVersion') == version,
             'Candidate archives cannot be promoted by this generator')
     require(manifest.get('sourceSHA') == commit and manifest.get('architectures') == ['arm64']
