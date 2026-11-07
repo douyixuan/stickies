@@ -131,3 +131,6 @@ with tempfile.TemporaryDirectory() as root:
         assert files(profile) == before
     print('PASS synthetic v2/v3 read-only reads, forward write and reopen, trash/layout preservation, journal refusal')
 PY
+
+# Frozen fixtures were emitted by pinned historical writers, not hand-built JSON.
+python3 Tests/HistoricalProfileTests.py "$istk"

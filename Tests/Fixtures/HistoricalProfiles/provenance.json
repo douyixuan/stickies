@@ -1,0 +1,37 @@
+{
+  "description": "Synthetic payloads emitted/read by pinned historical code; no user data. v01/v02/v03 denote format families, not assertions of shipped marketing versions.",
+  "commits": {
+    "v01": "4b8a6b7fa467da5b2b516168c18eb3017e6c1525",
+    "v02": "369e65b21cfc8176db04dd69a0c5488f881e195e",
+    "v03": "171bba9efb18829c480d75aa0945ef562801e0cb"
+  },
+  "sourceSHA256": {
+    "4b8a6b7fa467da5b2b516168c18eb3017e6c1525:Stickies/NoteStore.swift": "55976f1ec541d660f2519b5d1b595191e993c1732d651d066e98aeb8dc3b696e",
+    "369e65b21cfc8176db04dd69a0c5488f881e195e:Stickies/NoteModel.swift": "4dae66af4f8a37412e03ab4020b684c0cfc3cce1caa8fd1fcac358f48528190b",
+    "171bba9efb18829c480d75aa0945ef562801e0cb:Stickies/StickyNote.swift": "bff081dc9398eb723e0d383be24eaa1430dd7153efcf2927b79b68fda766ef0e",
+    "171bba9efb18829c480d75aa0945ef562801e0cb:Stickies/LosslessJSON.swift": "7d0943056c64da558340443e4b657742f95bda04f492d6d4f226772f03c22e1d",
+    "171bba9efb18829c480d75aa0945ef562801e0cb:Stickies/CompatibleNoteFile.swift": "7bc7e823bdd7ed8e1d4ee09f05d31f9fe890bb5bb4906d02c4bc70d917b2aa5f",
+    "171bba9efb18829c480d75aa0945ef562801e0cb:Stickies/LocalNoteTrash.swift": "383fb6ebfc8413a567e014cdc2a352822702f2d2923b1a7f6ce042d3c0a46a56",
+    "171bba9efb18829c480d75aa0945ef562801e0cb:Stickies/SerializedNoteCommands.swift": "7c712c606e620c71c78e15f208eddcba022dfa7fa982b6a366c1998e15d7ec94",
+    "171bba9efb18829c480d75aa0945ef562801e0cb:Stickies/SegmentedCommandLedger.swift": "e455584a0b07f8d5f2ccd5f68e06d895cb8bae5f3c0df3721d389623b194688f"
+  },
+  "fixtureSHA256": {
+    "v01/notes.json": "67d4c83ba81288c902d42fb4268ef0a2f9079cff33dcd675e96adfed6e6a00eb",
+    "v01/preferences.json": "0c151c33b3fb3baf1c06b6f8da8b8c664455cdad92eecda5498a3fa8daa79200",
+    "v02/notes.json": "dbe0e7297ce9b86eaa93a620adfd867acb56836c93fcee631357351b33115781",
+    "v02/preferences.json": "0c151c33b3fb3baf1c06b6f8da8b8c664455cdad92eecda5498a3fa8daa79200",
+    "v03/command-results.json": "8a74399fae551adbcc48c126d3cbe9184aa6e2d05f686e98c3118911598c32ee",
+    "v03/command-segment-D46A7F62-060C-413A-A822-DA4D7BD0A7C7-8a74399fae551adbcc48c126d3cbe9184aa6e2d05f686e98c3118911598c32ee.json": "8a74399fae551adbcc48c126d3cbe9184aa6e2d05f686e98c3118911598c32ee",
+    "v03/notes.json": "5854671e5d12a06796d5bb0ee78ebdef796eb23520f997b731bf135b11111db3",
+    "v03/preferences.json": "0c151c33b3fb3baf1c06b6f8da8b8c664455cdad92eecda5498a3fa8daa79200",
+    "v03/trash.json": "e42fe5f45f0c86ba4a103c7074ecd69fd980899e40375fcd30839c80c942d5f6",
+    "v03-journal/command-journal.json": "c1b7af3a81671587a5c5964c581ca792dce4d4e4e5a3728ecdcb7c008bfebc23",
+    "v03-journal/command-results.json": "8a74399fae551adbcc48c126d3cbe9184aa6e2d05f686e98c3118911598c32ee",
+    "v03-journal/command-segment-D46A7F62-060C-413A-A822-DA4D7BD0A7C7-8a74399fae551adbcc48c126d3cbe9184aa6e2d05f686e98c3118911598c32ee.json": "8a74399fae551adbcc48c126d3cbe9184aa6e2d05f686e98c3118911598c32ee",
+    "v03-journal/command-segment-D46A7F62-060C-413A-A822-DA4D7BD0A7C7-d91910b9c894aa33f03e6cc530ab8ef137c8c18d55c0848dd8f9ee16246ecca9.json": "d91910b9c894aa33f03e6cc530ab8ef137c8c18d55c0848dd8f9ee16246ecca9",
+    "v03-journal/notes.json": "5854671e5d12a06796d5bb0ee78ebdef796eb23520f997b731bf135b11111db3",
+    "v03-journal/preferences.json": "0c151c33b3fb3baf1c06b6f8da8b8c664455cdad92eecda5498a3fa8daa79200",
+    "v03-journal/trash.json": "e42fe5f45f0c86ba4a103c7074ecd69fd980899e40375fcd30839c80c942d5f6"
+  },
+  "journal": "Historical transaction interrupted after prepared; recovery verified on a separate copy."
+}
