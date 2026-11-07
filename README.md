@@ -87,3 +87,30 @@ CI runs the core suite, compiles the app shell, builds the CLI and builds the ap
 only exist on a real Mac with a real mouse, and no headless test will ever prove they
 work. [`docs/QA.md`](docs/QA.md) is the ten-minute pass that does. Run it before you
 trust a build.
+
+## CLI distribution preparation
+
+CI retains a standalone `istk` ZIP with a manifest and usage instructions alongside
+the App candidate. These archives are candidates, not stable Homebrew releases.
+No `brew install` command is available yet. The CLI can be used by its full path;
+every data command requires an explicit `--dir`. Use a new synthetic directory first.
+
+`scripts/prepare-cli-formula.py` prepares a formula only **after** an independently
+accepted CLI release exists. It performs read-only network checks and never publishes,
+installs, changes PATH, launches an App or opens a note profile. It refuses candidates,
+draft/prerelease assets, wrong source/CI, mismatched hashes and unsupported architectures.
+The generated formula includes an isolated create/read/search test.
+
+The release contract is an exact `cli-vMAJOR.MINOR.PATCH` tag and uploaded assets
+`istk-MAJOR.MINOR.PATCH-macos-arm64.zip` plus `verification.json`. Both must have GitHub
+SHA-256 digests. The report must identify the successful exact-source repository CI
+via `ciRunID`, and the verified archive and executable hashes via `standaloneCLI`.
+The ZIP contains only `istk`, `manifest.json`, and `USAGE.txt`; its manifest must record
+`releaseVersion`, `candidateOnly: false`, source/hash, ARM64, macOS 14 and schema 10.
+Current candidate packaging intentionally does not satisfy this stable-release contract.
+The generator cannot approve or relabel a candidate into a release.
+
+After those release requirements are met, run the generator with the actual tag and
+an unused formula output path, then review and test the result in the intended tap.
+Formal version selection, stable CLI acceptance, release upload and tap publication
+remain separate steps. CLI acceptance does not imply GUI or App upgrade acceptance.
