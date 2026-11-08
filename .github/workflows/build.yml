@@ -5,9 +5,17 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Build input isolation regression
+        run: |
+          python3 Tests/BuildSnapshotTests.py
+          python3 Tests/CLIFormulaTests.py
+          python3 Tests/ProfileBackupTests.py
 
       - name: Core tests — data, migration, layout, recovery (no windows)
         run: bash scripts/test.sh
@@ -24,3 +32,22 @@ jobs:
         run: |
           brew install xcodegen
           bash scripts/build-app.sh
+
+      - name: Verify the final candidate archive
+        run: python3 scripts/package-candidate.py
+
+      - name: Keep verified candidate (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: istickies2-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/candidate/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Keep verified versioned CLI assets (not published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: istk-cli-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/cli-release/*
+          if-no-files-found: error
+          retention-days: 14

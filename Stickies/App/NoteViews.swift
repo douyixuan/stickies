@@ -43,6 +43,7 @@ struct NoteHeaderView: View {
     var body: some View {
         Menu {
             Button("New Note") { AppServices.shared.windows.createNote() }
+                .disabled(!store.isWritable)
             Button("Hide This Note") { AppServices.shared.windows.hide(noteID) }
             Button(store.isCollapsed(noteID) ? "Expand Note" : "Collapse Note") {
                 AppServices.shared.windows.toggleCollapse(noteID)

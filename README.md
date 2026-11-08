@@ -116,3 +116,42 @@ CI runs the core suite, compiles the app shell, builds the CLI and builds the ap
 only exist on a real Mac with a real mouse, and no headless test will ever prove they
 work. [`docs/QA.md`](docs/QA.md) is the ten-minute pass that does. Run it before you
 trust a build.
+
+## CLI distribution preparation
+
+CI retains a standalone `istk` ZIP with a manifest and usage instructions alongside
+the App candidate. These archives are candidates, not stable Homebrew releases.
+The independent [CLI 1.0.0 release](https://github.com/douyixuan/stickies/releases/tag/cli-v1.0.0)
+is available for Apple Silicon through the [Homebrew tap](https://github.com/douyixuan/homebrew-tap):
+
+```sh
+brew install douyixuan/tap/istk
+brew update && brew upgrade douyixuan/tap/istk
+```
+
+This installs only the CLI, not the GUI App. Every data command requires an explicit
+`--dir`. Use a new synthetic directory first. The tap CI verifies installation and
+isolated create/read/search; it does not operate on daily notes. See the release
+for exact source, checksums, tested host and ad-hoc signature boundaries.
+
+`scripts/prepare-cli-formula.py` prepares a formula only **after** an independently
+accepted CLI release exists. It performs read-only network checks and never publishes,
+installs, changes PATH, launches an App or opens a note profile. It refuses candidates,
+draft/prerelease assets, wrong source/CI, mismatched hashes and unsupported architectures.
+The generated formula includes an isolated create/read/search test.
+
+The release contract is an exact `cli-vMAJOR.MINOR.PATCH` tag and uploaded assets
+`istk-MAJOR.MINOR.PATCH-macos-arm64.zip` plus `verification.json`. Both must have GitHub
+SHA-256 digests. The report must identify the successful exact-source repository CI
+via `ciRunID`, and the verified archive and executable hashes via `standaloneCLI`.
+The ZIP contains only `istk`, `manifest.json`, and `USAGE.txt`; its manifest must record
+`releaseVersion`, `candidateOnly: false`, source/hash, ARM64, macOS 14 and schema 10.
+The App candidate does not satisfy this stable-release contract. CI separately builds
+versioned CLI release assets from the explicit CLI source version, verifies the final
+ZIP using isolated profiles, and retains them without publishing. The generator
+cannot approve or relabel an App candidate into a release.
+
+After those release requirements are met, run the generator with the actual tag and
+an unused formula output path, then review and test the result in the intended tap.
+For subsequent versions, source versioning, exact main CI, release upload and tap
+verification remain separate steps. CLI acceptance does not imply GUI or App upgrade acceptance.

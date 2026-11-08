@@ -155,6 +155,13 @@ final class NoteStore: ObservableObject {
         mutate(id) { $0.frame = frame }
     }
 
+    /// Read-only presentation can recover a window without changing its saved geometry.
+    func windowFrame(_ id: UUID, screens: [CGRect]) -> CGRect? {
+        guard let note = note(id) else { return nil }
+        let expanded = isWritable ? note.frame : layout.restoredFrame(id: id, expanded: note.frame, screens: screens)
+        return layout.renderedFrame(id: id, expanded: expanded)
+    }
+
     private func mutate(_ id: UUID, _ change: (inout StickyNote) -> Void) {
         guard isWritable, let index = notes.firstIndex(where: { $0.id == id }) else { return }
         let before = notes[index]
