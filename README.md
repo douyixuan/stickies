@@ -41,7 +41,8 @@ Everything is per-Mac. There is no sync, by design.
 
 ## Command line
 
-The CLI is a separate build; `build-app.sh` does not bundle it in the app.
+The CLI can be built separately; `build-app.sh` also bundles it at
+`build/iStickies2.app/Contents/MacOS/istk`.
 With the macOS command-line developer tools installed, run these commands from
 this checkout. Nothing is installed in PATH or added to your shell configuration.
 
@@ -64,7 +65,7 @@ path (or its absolute equivalent), not a bare `istk` command.
 
 The data commands are `list`, `search <query>`, `get <id>` and `add [text]`;
 their successful responses are JSON. `help` prints plain-text usage, while
-`version` prints JSON. This CLI reports version `1.0`, schema `10`; that is not an app build
+`version` prints JSON. This CLI reports version `1.0.0`, schema `10`; that is not an app build
 number or commit identifier. It uses `--dir`, whereas the older 0.3 CLI bundled
 in 0.3.105 uses `--data-dir` and has a different command contract. Do not
 interchange the examples or binaries.
@@ -155,3 +156,30 @@ After those release requirements are met, run the generator with the actual tag 
 an unused formula output path, then review and test the result in the intended tap.
 For subsequent versions, source versioning, exact main CI, release upload and tap
 verification remain separate steps. CLI acceptance does not imply GUI or App upgrade acceptance.
+
+## Roadmap evidence
+
+[ROADMAP.md](ROADMAP.md) is the feature progress entry. Checkmarks apply only to
+the named capability, not to every build or the complete original product.
+
+- The user accepted basic Preview operation and confirmed text and positions
+  survived normal quit/reopen. This supports the new/edit and save/reopen leaves;
+  it does not close the [full Mac GUI pass](docs/QA.md).
+- Daily 0.4.0 build 107 (source `f92d674ad06a`) was installed on 2026-11-08 after
+  normal-exit confirmation, process/lock checks, full-profile backup restoration
+  and old-app archive verification. The installation record retains archive
+  hashes and a version/source deduplication key. Installation did not launch
+  the app or migrate the profile; a real post-upgrade rollback remains untested.
+- [CLI release CI](https://github.com/douyixuan/stickies/actions/runs/42389530538)
+  exercised the extracted package against synthetic profiles.
+  [Tap CI](https://github.com/douyixuan/homebrew-tap/actions/runs/42389854866)
+  installed and tested CLI 1.0.0 on ARM64 macOS 26. A real version-to-version
+  Homebrew upgrade has not yet been exercised. App installation is separate.
+- [Backup tests](https://github.com/douyixuan/stickies/pull/52) and
+  [historical-writer fixtures](https://github.com/douyixuan/stickies/pull/53)
+  cover isolated whole-profile restore, failures and old-format compatibility.
+  They do not establish GUI or power-loss acceptance.
+- Canvas/search/workspace restoration, grouping, bulk deletion and sync retain
+  their unresolved scope boundaries after the PR #31 rewrite. The roadmap does
+  not authorize their implementation or declare the original requirements removed.
+  Optional Canvas remains the recorded direction, not a mandatory startup screen.
