@@ -49,6 +49,21 @@ def files(profile):
 
 with tempfile.TemporaryDirectory() as root:
     root = pathlib.Path(root)
+    # An empty shell variable must not select and write to the working directory.
+    empty_cwd = root / 'empty argument cwd'
+    empty_cwd.mkdir()
+    for command in (['add', 'must not save'], ['list']):
+        result = subprocess.run([cli, '--dir', '', *command], cwd=empty_cwd, capture_output=True)
+        assert result.returncode == 64 and b'non-empty path' in result.stderr
+        assert list(empty_cwd.iterdir()) == []
+    explicit = subprocess.run([cli, '--dir', '.', 'add', 'explicit current directory'],
+                              cwd=empty_cwd, capture_output=True)
+    assert explicit.returncode == 0
+    saved = json.loads(explicit.stdout)
+    reread = subprocess.check_output([cli, '--dir', '.', 'get', saved['id']], cwd=empty_cwd)
+    assert json.loads(reread)['text'] == 'explicit current directory'
+    print('PASS empty directory rejected without files; explicit relative directory persists')
+
     profile = root / 'Unicode notes 📝'
     text = '中文便签 📝 café\n第二行\n末尾保留\n'
     note = run(profile, 'add', data=text.encode())
