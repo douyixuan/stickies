@@ -23,6 +23,7 @@ struct Istk {
 
         if let index = arguments.firstIndex(of: "--dir") {
             guard index + 1 < arguments.count else { fail(64, "--dir needs a path") }
+            guard !arguments[index + 1].isEmpty else { fail(64, "--dir needs a non-empty path") }
             directory = arguments[index + 1]
             arguments.removeSubrange(index...(index + 1))
         }
