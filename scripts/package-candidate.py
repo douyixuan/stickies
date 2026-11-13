@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory(prefix='istk candidate ') as temp:
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(restored)], check=True)
     subprocess.run(['codesign', '--verify', '--strict', str(cli)], check=True)
     version = json.loads(run(str(cli), 'version'))
-    assert version == {'version': '1.0.0', 'schemaVersion': 10}
+    assert version == {'version': '1.0.1', 'schemaVersion': 10}
     env = dict(os.environ, ISTK_TEST_BINARY=str(cli))
     env.pop('STICKIES_DATA_DIR', None)
     with (output / 'cli-check.log').open('wb') as log:
