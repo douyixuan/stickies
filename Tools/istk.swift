@@ -48,7 +48,7 @@ struct Istk {
             print(usage)
             return
         case "version", "--version":
-            emit(["version": "1.0.0", "schemaVersion": NoteFile.currentVersion])
+            emit(["version": "1.0.1", "schemaVersion": NoteFile.currentVersion])
             return
         default:
             break
